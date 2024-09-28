@@ -1,6 +1,0 @@
-Como usar LotoSote
-
-1 - Gerar Jogos
-|-> 1.1 - Gerar Jogos Aleatórios
-|-> 1.2 - Gerar Jogos Aleatórios com Filtros
-|-> 1.3 - Gerar Jogos Aleatórios com Filtros e Exclusões
