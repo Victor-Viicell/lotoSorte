@@ -6,7 +6,11 @@ import javax.swing.tree.DefaultMutableTreeNode;
 
 public class App {
 
+    private static final String rootPath = System.getProperty("user.dir");
+
     public static void main(String[] args) {
+
+        System.out.println(rootPath);
         SwingUtilities.invokeLater(() -> {
             JFrame app = new JFrame("LotoSorte");
             app.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -33,7 +37,7 @@ public class App {
             JPanel monitorAndConsoleEast = new JPanel();
             JPanel configAndCreationWest = new JPanel();
             JPanel choseGameModeArea = new JPanel();
-            String[] gameModes = new String[]{"Jogo 1", "Jogo 2", "Jogo 3"};
+            String[] gameModes = new String[]{"Megasena"};
             JComboBox<String> gameModeComboBox = new JComboBox<>(gameModes);
 
             JPanel monitorPanelArea = new JPanel();
