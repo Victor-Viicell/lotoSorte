@@ -9,4 +9,13 @@ public class App {
         };
         EventQueue.invokeLater(runner);
     }
+
+    // Classes
+    public static class GameMode {
+
+        private String nameString;
+        private Integer numbersInteger;
+        private Boolean include00Boolean;
+        private 
+    }
 }
