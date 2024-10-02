@@ -9,13 +9,18 @@ public class App {
 
     public static void main(String[] args) {
         Runnable runner = () -> {
-            // Your code here
         };
 
         EventQueue.invokeLater(runner);
     }
 
     // Methods
+    public static GeneratedGameFile genGameFile(GameMode gameMode, GeneratedGame[] generatedGames) {
+        GeneratedGameFile generatedGameFile = new GeneratedGameFile(gameMode, generatedGames, generatedGames.length);
+        generatedGameFile.calculateStatistics();
+        return generatedGameFile;
+    }
+
     public static GeneratedGame[] genMultiGames(GameMode gameMode, int amountGames, int numbersPerGame) {
         GeneratedGame[] generatedGames = new GeneratedGame[amountGames];
         for (int i = 0; i < amountGames; i++) {
