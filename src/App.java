@@ -16,6 +16,14 @@ public class App {
     }
 
     // Methods
+    public static GeneratedGame[] genMultiGames(GameMode gameMode, int amountGames, int numbersPerGame) {
+        GeneratedGame[] generatedGames = new GeneratedGame[amountGames];
+        for (int i = 0; i < amountGames; i++) {
+            generatedGames[i] = genGame(gameMode, numbersPerGame);
+        }
+        return generatedGames;
+    }
+
     public static GeneratedGame genGame(GameMode gameMode, int amount) {
         GeneratedGame generatedGame = new GeneratedGame(null);
         generatedGame.gameMode = gameMode.nameString;
@@ -222,12 +230,9 @@ public class App {
         private float primeNumbersPercentageFloat;
         private NumberPresence[] numberPresences;
 
-        public GeneratedGameFile(GameMode gameMode, GeneratedGame[] generatedGames) {
+        public GeneratedGameFile(GameMode gameMode, GeneratedGame[] generatedGames, int totalGames) {
             this.gameMode = gameMode.nameString;
             this.generatedGames = generatedGames;
-            this.oddNumbersPercentageFloat = 0;
-            this.evenNumbersPercentageFloat = 0;
-            this.primeNumbersPercentageFloat = 0;
         }
 
         public void calculateStatistics() {
@@ -268,9 +273,9 @@ public class App {
             }
 
             // Calculate percentages
-            oddNumbersPercentageFloat = (float) oddCount / totalNumbers * 100;
-            evenNumbersPercentageFloat = (float) evenCount / totalNumbers * 100;
-            primeNumbersPercentageFloat = (float) primeCount / totalNumbers * 100;
+            this.oddNumbersPercentageFloat = (float) oddCount / totalNumbers * 100;
+            this.evenNumbersPercentageFloat = (float) evenCount / totalNumbers * 100;
+            this.primeNumbersPercentageFloat = (float) primeCount / totalNumbers * 100;
 
             // Calculate number presence percentages
             for (NumberPresence np : numberPresences) {
