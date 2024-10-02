@@ -1,5 +1,8 @@
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Random;
 
 public class App {
 
@@ -12,6 +15,49 @@ public class App {
     }
 
     // Methods
+    public static GeneratedGame genGame(GameMode gameMode, int amount) {
+        GeneratedGame generatedGame = new GeneratedGame();
+        generatedGame.gameMode = gameMode.nameString;
+
+        if (gameMode.nameString.equals("Super-Sete")) {
+            generatedGame.generatedNumbers = new String[gameMode.superSevenCollumsInteger][amount / gameMode.superSevenCollumsInteger];
+            for (int i = 0; i < gameMode.superSevenCollumsInteger; i++) {
+                generateUniqueNumbers(gameMode, generatedGame.generatedNumbers[i], amount / gameMode.superSevenCollumsInteger);
+            }
+        } else {
+            generatedGame.generatedNumber = new String[amount];
+            generateUniqueNumbers(gameMode, generatedGame.generatedNumber, amount);
+        }
+
+        if (gameMode.nameString.equals("Dia de Sorte")) {
+            int randomIndex = new Random().nextInt(gameMode.luckyDayMonthsString.length);
+            generatedGame.luckyDayMonthString = gameMode.luckyDayMonthsString[randomIndex];
+        }
+        return generatedGame;
+    }
+
+    private static void generateUniqueNumbers(GameMode gameMode, String[] result, int amount) {
+        ArrayList<LuckNumber> availableNumbers = new ArrayList<>(Arrays.asList(gameMode.numbersLuckNumber));
+        Random random = new Random();
+        for (int i = 0; i < amount; i++) {
+            double totalWeight = 0;
+            for (LuckNumber ln : availableNumbers) {
+                totalWeight += ln.numbersPercentageFloat;
+            }
+            double randomValue = random.nextDouble() * totalWeight;
+            double cumulativeWeight = 0.0;
+
+            for (int j = 0; j < availableNumbers.size(); j++) {
+                cumulativeWeight += availableNumbers.get(j).numbersPercentageFloat;
+                if (randomValue <= cumulativeWeight) {
+                    result[i] = availableNumbers.get(j).numberString;
+                    availableNumbers.remove(j);
+                    break;
+                }
+            }
+        }
+    }
+
     public static GameMode[] gameModes() {
         GameMode[] gameModes = new GameMode[8];
         gameModes[0] = gameModeConstructor("Mega-Sena", 60, 6, 20, false, 5.00);
@@ -47,15 +93,11 @@ public class App {
         gameMode.numbersLuckNumber = new LuckNumber[totalNumbersInteger];
         for (int i = 0; i < gameMode.totalNumbersInteger; i++) {
             LuckNumber luckNumber = new LuckNumber();
-            if (include00Boolean && i == 0) {
-                if (i < 10 && !nameString.equals("Super-Sete")) {
-                    luckNumber.numberString = String.format("0%02d", i);
-                } else {
-                    luckNumber.numberString = String.format("%02d", i);
-                }
+            if (nameString.equals("Super-Sete")) {
+                luckNumber.numberString = String.valueOf(i);
             } else {
-                if (i < 10 && !nameString.equals("Super-Sete")) {
-                    luckNumber.numberString = String.format("0%02d", i + 1);
+                if (include00Boolean && i == 0) {
+                    luckNumber.numberString = String.format("%02d", i);
                 } else {
                     luckNumber.numberString = String.format("%02d", i + 1);
                 }
@@ -65,6 +107,7 @@ public class App {
         }
 
         return gameMode;
+
     }
 
     // Classes
@@ -95,7 +138,8 @@ public class App {
     public static class GeneratedGame {
 
         private String gameMode;
-        private String[] generatedNumbers;
+        private String[] generatedNumber;
+        private String[] generatedNumbers[];
         private String luckyDayMonthString;
     }
 }
