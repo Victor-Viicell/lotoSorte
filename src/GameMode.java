@@ -74,7 +74,7 @@ public class GameMode {
                     7,
                     15,
                     2.50f));
-    public static GameModes.CommonGame superSete = new GameModes().new CommonGame(
+    public static GameModes.SuperSete superSete = new GameModes().new SuperSete(
             new Config(
                     "Super Sete",
                     10,
@@ -85,12 +85,12 @@ public class GameMode {
 
     public static class Config {
 
-        private String name;
-        private int playableNumbers;
-        private boolean startsAtZero;
-        private int minSelections;
-        private int maxSelections;
-        private float cardPrice;
+        public String name;
+        public int playableNumbers;
+        public boolean startsAtZero;
+        public int minSelections;
+        public int maxSelections;
+        public float cardPrice;
 
         public Config(
                 String name,
@@ -107,17 +107,19 @@ public class GameMode {
             this.cardPrice = cardPrice;
         }
 
-        public String[] ConstructNumbers(int playableNumbers, Boolean extraDecimal) {
+        public String[] ConstructNumbers(int playableNumbers) {
             String[] numbers = new String[playableNumbers];
+
             for (int i = 0; i < playableNumbers; i++) {
-                // 00-50 and Starts at 0 bool
-                String temp = "";
-                if (startsAtZero) {
+                String temp;
+
+                if (startsAtZero && i == 0) {
                     temp = String.valueOf(i);
                 } else {
                     temp = String.valueOf(i + 1);
                 }
-                if (i > 10 && extraDecimal) {
+
+                if (i < 9 || (startsAtZero && i < 10)) {
                     numbers[i] = "0" + temp;
                 } else {
                     numbers[i] = temp;
@@ -129,39 +131,55 @@ public class GameMode {
 
     public static class GameModes {
 
-        private class MaisMilhionaria {
+        public class MaisMilhionaria {
 
-            private Config config;
-            private String[] trevos = {"1", "2", "3", "4", "5", "6"};
-            private String[] numbers;
+            public Config config;
+            public String[] trevos = {"1", "2", "3", "4", "5", "6"};
+            public String[] numbers;
 
             public MaisMilhionaria(Config config) {
                 this.config = config;
-                this.numbers = config.ConstructNumbers(config.playableNumbers, true);
+                this.numbers = config.ConstructNumbers(config.playableNumbers);
             }
         }
 
-        private class DiaDeSorte {
+        public class DiaDeSorte {
 
-            private Config config;
-            private String[] numbers;
-            private String[] months = {"Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto",
+            public Config config;
+            public String[] numbers;
+            public String[] months = {"Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto",
                 "Setembro", "Outubro", "Novembro", "Dezembro"};
 
             public DiaDeSorte(Config config) {
                 this.config = config;
-                this.numbers = config.ConstructNumbers(config.playableNumbers, true);
+                this.numbers = config.ConstructNumbers(config.playableNumbers);
             }
         }
 
-        private class CommonGame {
+        public class SuperSete {
 
-            private Config config;
-            private String[] numbers;
+            public Config config;
+            public String[][] columns;
+            public String[] numbers;
+
+            public SuperSete(Config config) {
+                this.config = config;
+                this.numbers = new String[]{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
+                this.columns = new String[7][10];
+                for (int i = 0; i < 7; i++) {
+                    System.arraycopy(numbers, 0, columns[i], 0, 10);
+                }
+            }
+        }
+
+        public class CommonGame {
+
+            public Config config;
+            public String[] numbers;
 
             public CommonGame(Config config) {
                 this.config = config;
-                this.numbers = config.ConstructNumbers(config.playableNumbers, !config.name.equals("Super Sete"));
+                this.numbers = config.ConstructNumbers(config.playableNumbers);
             }
         }
 
