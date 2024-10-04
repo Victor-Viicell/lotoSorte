@@ -107,26 +107,30 @@ public class GameMode {
             this.cardPrice = cardPrice;
         }
 
-        public String[] ConstructNumbers(int playableNumbers) {
-            String[] numbers = new String[playableNumbers];
+        public NumberClass[] ConstructNumbers(int playableNumbers) {
+            NumberClass[] numbers = new NumberClass[playableNumbers];
 
             for (int i = 0; i < playableNumbers; i++) {
-                String temp;
-
                 if (startsAtZero && i == 0) {
-                    temp = String.valueOf(i);
+                    numbers[i] = new NumberClass();
+                    numbers[i].number = String.valueOf(i + 1);
                 } else {
-                    temp = String.valueOf(i + 1);
+                    numbers[i] = new NumberClass();
+                    numbers[i].number = String.valueOf(i);
                 }
-
+                numbers[i].percentage = 100f / playableNumbers;
                 if (i < 9 || (startsAtZero && i < 10)) {
-                    numbers[i] = "0" + temp;
-                } else {
-                    numbers[i] = temp;
+                    numbers[i].number = "0" + numbers[i].number;
                 }
             }
             return numbers;
         }
+    }
+
+    public static class NumberClass {
+
+        public String number;
+        public Float percentage;
     }
 
     public static class GameModes {
@@ -135,7 +139,7 @@ public class GameMode {
 
             public Config config;
             public String[] trevos = {"1", "2", "3", "4", "5", "6"};
-            public String[] numbers;
+            public NumberClass[] numbers;
 
             public MaisMilhionaria(Config config) {
                 this.config = config;
@@ -146,7 +150,7 @@ public class GameMode {
         public class DiaDeSorte {
 
             public Config config;
-            public String[] numbers;
+            public NumberClass[] numbers;
             public String[] months = {"Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto",
                 "Setembro", "Outubro", "Novembro", "Dezembro"};
 
@@ -160,11 +164,11 @@ public class GameMode {
 
             public Config config;
             public String[][] columns;
-            public String[] numbers;
+            public NumberClass[] numbers;
 
             public SuperSete(Config config) {
                 this.config = config;
-                this.numbers = new String[]{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
+                this.numbers = config.ConstructNumbers(config.playableNumbers);
                 this.columns = new String[7][10];
                 for (int i = 0; i < 7; i++) {
                     System.arraycopy(numbers, 0, columns[i], 0, 10);
@@ -175,7 +179,7 @@ public class GameMode {
         public class CommonGame {
 
             public Config config;
-            public String[] numbers;
+            public NumberClass[] numbers;
 
             public CommonGame(Config config) {
                 this.config = config;
