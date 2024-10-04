@@ -176,7 +176,7 @@ public class GameGen extends GameMode {
             public int numberOfColumns = 7;
             public String[][] generatedNumbers;
 
-            // TODO: Terminar este e depois Datas
+            // TODO:Terminar este e depois Datas
             public GenSuperSete(GameModes.SuperSete gameMode, int numberOfGames, int numberOfNumbers) {
                 this.name = gameMode.config.name;
                 this.numberOfGames = numberOfGames;
