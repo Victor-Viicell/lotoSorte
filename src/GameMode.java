@@ -49,7 +49,7 @@ public class GameMode {
     /**
      * Instância do jogo Mais Milionária
      */
-    public MaisMilhionaria maisMilhionaria;
+    public MaisMilionaria maisMilionaria;
 
     /**
      * Instância do jogo Dia de Sorte
@@ -80,7 +80,7 @@ public class GameMode {
         this.displayDecimal = displayDecimal;
         this.startAtZero = startAtZero;
         this.numbers = getNumbers(this.playableNumbers, this.displayDecimal, this.startAtZero);
-        this.maisMilhionaria = new MaisMilhionaria();
+        this.maisMilionaria = new MaisMilionaria();
         this.diaDeSorte = new DiaDeSorte();
         this.superSete = new SuperSete();
     }
@@ -171,7 +171,7 @@ public class GameMode {
     /**
      * Classe que representa o jogo Mais Milionária.
      */
-    public class MaisMilhionaria {
+    public class MaisMilionaria {
 
         /**
          * Número mínimo de trevos que podem ser selecionados.
@@ -208,7 +208,7 @@ public class GameMode {
          * Construtor da classe MaisMilhionaria. Inicializa o array de trevos
          * chamando o método getTrevo().
          */
-        public MaisMilhionaria() {
+        public MaisMilionaria() {
             this.trevos = getTrevo();
         }
 
@@ -240,7 +240,7 @@ public class GameMode {
          * @param selections O número de trevos a serem selecionados.
          * @return Um array de Strings contendo os trevos selecionados.
          */
-        public final String[] genTrevos(Integer selections) {
+        public final String[] genTrevos(int selections) {
             // Inicializa o array que irá armazenar os trevos selecionados
             String[] selection = new String[selections];
 
@@ -465,7 +465,7 @@ public class GameMode {
          * @return Uma matriz de strings representando as seleções para cada
          * coluna.
          */
-        public final String[][] genSuperSeven(Integer selections) {
+        public final String[][] genSuperSeven(int selections) {
             // Inicializa a matriz de seleção com o tamanho apropriado
             String[][] selection = new String[columns.length][3];
             Random random = new Random();
