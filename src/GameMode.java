@@ -46,6 +46,8 @@ public class GameMode {
      */
     public Boolean startAtZero;
 
+    public float costPerGame;
+
     /**
      * Instância do jogo Mais Milionária
      */
@@ -71,8 +73,10 @@ public class GameMode {
      * @param displayDecimal Indica se os números devem ser exibidos com casas
      * decimais
      * @param startAtZero Indica se a contagem dos números deve começar do zero
+     * @param costPerGame Custo por jogo
      */
-    public GameMode(String name, Integer playableNumbers, Integer minSelections, Integer maxSelections, Boolean displayDecimal, Boolean startAtZero) {
+    public GameMode(String name, Integer playableNumbers, Integer minSelections, Integer maxSelections,
+            Boolean displayDecimal, Boolean startAtZero, float costPerGame) {
         this.name = name;
         this.playableNumbers = playableNumbers;
         this.minSelections = minSelections;
@@ -83,6 +87,7 @@ public class GameMode {
         this.maisMilionaria = new MaisMilionaria();
         this.diaDeSorte = new DiaDeSorte();
         this.superSete = new SuperSete();
+        this.costPerGame = costPerGame;
     }
 
     /**
@@ -465,7 +470,7 @@ public class GameMode {
          * @return Uma matriz de strings representando as seleções para cada
          * coluna.
          */
-        public final String[][] genSuperSeven(int selections) {
+        public final String[][] genSuperSevenBase(int selections) {
             // Inicializa a matriz de seleção com o tamanho apropriado
             String[][] selection = new String[columns.length][3];
             Random random = new Random();
@@ -523,6 +528,32 @@ public class GameMode {
             }
 
             return selection;
+        }
+
+        /**
+         * Gera uma sequência de números para o jogo Super Seven.
+         *
+         * @param selections O número de seleções a serem feitas.
+         * @return Um array de Strings contendo os números selecionados.
+         */
+        public final String[] genSuperSeven(int selections) {
+            // Gera a base do Super Seven usando o método auxiliar
+            String[][] result = genSuperSevenBase(selections);
+
+            // Converte o array bidimensional em um array unidimensional
+            String[] flatResult = new String[result.length * 3];
+            int index = 0;
+            for (String[] column : result) {
+                for (String number : column) {
+                    // Adiciona apenas números não nulos ao array final
+                    if (number != null) {
+                        flatResult[index++] = number;
+                    }
+                }
+            }
+
+            // Remove elementos nulos e redimensiona o array para o tamanho exato
+            return Arrays.copyOf(flatResult, index);
         }
 
     }
