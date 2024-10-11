@@ -23,12 +23,17 @@ public class Game {
     /**
      * Objeto específico para o jogo Mais Milionária, se aplicável.
      */
-    public MaisMilionaria maisMilhionaria;
+    public MaisMilionaria maisMilionaria;
 
     /**
      * Objeto específico para o jogo Dia de Sorte, se aplicável.
      */
     public DiaDeSorte diaDeSorte;
+
+    /**
+     * Objeto específico para o jogo Super Sete, se aplicável.
+     */
+    public SuperSete superSete;
 
     /**
      * Quantidade de jogos a serem gerados.
@@ -65,14 +70,14 @@ public class Game {
         // Verifica o modo de jogo e realiza as inicializações específicas
         if (gameMode.name.equals("+Milionária") && extraNumbers != null) {
             // Inicializa o jogo Mais Milionária com números extras
-            this.maisMilhionaria = new MaisMilionaria();
-            this.maisMilhionaria.extraNumbers = extraNumbers;
+            this.maisMilionaria = new MaisMilionaria();
+            this.maisMilionaria.extraNumbers = extraNumbers;
         } else if (gameMode.name.equals("Dia de Sorte")) {
             // Inicializa o jogo Dia de Sorte
             this.diaDeSorte = new DiaDeSorte();
         } else if (gameMode.name.equals("Super-Sete")) {
             // Gera jogos específicos para o modo Super-Sete
-            this.games = genGameSuperSete();
+            this.games = superSete.genGameSuperSete();
         } else {
             // Gera jogos para os demais modos
             this.games = GenGames();
@@ -131,24 +136,31 @@ public class Game {
         return costString;
     }
 
-    /**
-     * Gera jogos para o modo Super-Sete.
-     *
-     * @return Uma matriz bidimensional de Strings representando os jogos
-     * gerados.
-     */
-    public final String[][] genGameSuperSete() {
-        // Inicializa a matriz de jogos com o tamanho adequado
-        String[][] ssGames = new String[amount][numbers];
+    public class SuperSete {
 
-        // Gera 'amount' jogos
-        for (int i = 0; i < amount; i++) {
-            // Utiliza o método genSuperSeven da classe superSete para gerar cada jogo
-            ssGames[i] = gameMode.superSete.genSuperSeven(numbers);
+        public String[][][] columnNumbers;
+
+        /**
+         * Gera jogos para o modo Super-Sete.
+         *
+         * @return Uma matriz bidimensional de Strings representando os jogos
+         * gerados.
+         */
+        public final String[][] genGameSuperSete() {
+
+            // Inicializa a matriz de jogos com o tamanho adequado
+            String[][] ssGames = new String[amount][numbers];
+            String[][][] columns = new String[amount][gameMode.superSete.columns.length][3];
+            // Gera 'amount' jogos
+            for (int i = 0; i < amount; i++) {
+                columns[i] = gameMode.superSete.genSuperSevenBase(numbers);
+                // Utiliza o método genSuperSeven da classe superSete para gerar cada jogo
+                ssGames[i] = gameMode.superSete.genSuperSeven(numbers, columns[i]);
+            }
+            columnNumbers = columns;
+            // Retorna a matriz com os jogos gerados
+            return ssGames;
         }
-
-        // Retorna a matriz com os jogos gerados
-        return ssGames;
     }
 
     /**

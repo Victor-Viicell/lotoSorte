@@ -1,7 +1,9 @@
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -526,6 +528,8 @@ public class GameMode {
             for (String[] column : selection) {
                 Arrays.sort(column, Comparator.nullsLast(Comparator.naturalOrder()));
             }
+            // remove os nulos
+            selection = Arrays.stream(selection).filter(Objects::nonNull).toArray(String[][]::new);
 
             return selection;
         }
@@ -536,24 +540,16 @@ public class GameMode {
          * @param selections O número de seleções a serem feitas.
          * @return Um array de Strings contendo os números selecionados.
          */
-        public final String[] genSuperSeven(int selections) {
-            // Gera a base do Super Seven usando o método auxiliar
-            String[][] result = genSuperSevenBase(selections);
-
-            // Converte o array bidimensional em um array unidimensional
-            String[] flatResult = new String[result.length * 3];
-            int index = 0;
+        public final String[] genSuperSeven(int selections, String[][] result) {
+            List<String> flatResult = new ArrayList<>();
             for (String[] column : result) {
                 for (String number : column) {
-                    // Adiciona apenas números não nulos ao array final
                     if (number != null) {
-                        flatResult[index++] = number;
+                        flatResult.add(number);
                     }
                 }
             }
-
-            // Remove elementos nulos e redimensiona o array para o tamanho exato
-            return Arrays.copyOf(flatResult, index);
+            return flatResult.toArray(String[]::new);
         }
 
     }
