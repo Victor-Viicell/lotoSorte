@@ -8,7 +8,6 @@ public class App {
         Runnable runner = () -> {
 
         };
-
         EventQueue.invokeLater(runner);
     }
 }
