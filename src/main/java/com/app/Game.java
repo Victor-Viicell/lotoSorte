@@ -1,7 +1,8 @@
+package com.app;
 
 /**
- * Representa um jogo da loteria.
- * Esta classe encapsula todas as informações e operações relacionadas a um jogo específico.
+ * Representa um jogo da loteria. Esta classe encapsula todas as informações e
+ * operações relacionadas a um jogo específico.
  */
 public class Game {
 
