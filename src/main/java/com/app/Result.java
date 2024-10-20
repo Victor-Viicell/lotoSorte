@@ -90,22 +90,22 @@ public class Result {
             case "Mega-Sena":
                 this.megaSena = new MegaSena();
                 break;
-            case "Loto-Fácil":
+            case "Lotofácil":
                 this.lotoFacil = new LotoFacil();
                 break;
             case "Quina":
                 this.quina = new Quina();
                 break;
-            case "Loto-Mania":
+            case "Lotomania":
                 this.lotoMania = new LotoMania();
                 break;
-            case "Dupla-Sena":
+            case "Dupla Sena":
                 this.duplaSena = new DuplaSena();
                 break;
             case "Dia de Sorte":
                 this.diaDeSorte = new DiaDeSorte();
                 break;
-            case "Super-Sete":
+            case "Super Sete":
                 this.superSete = new SuperSete();
                 break;
             default:

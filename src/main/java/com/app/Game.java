@@ -76,7 +76,7 @@ public class Game {
         } else if (gameMode.name.equals("Dia de Sorte")) {
             // Inicializa o jogo Dia de Sorte
             this.diaDeSorte = new DiaDeSorte();
-        } else if (gameMode.name.equals("Super-Sete")) {
+        } else if (gameMode.name.equals("Super Sete")) {
             // Gera jogos específicos para o modo Super-Sete
             this.games = superSete.genGameSuperSete();
         } else {
