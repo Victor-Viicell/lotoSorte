@@ -1,7 +1,10 @@
 package com.app;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Objects;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Representa o resultado de um jogo de loteria.
@@ -68,6 +71,9 @@ public class Result {
      */
     public String luckyMonth;
 
+    public Result() {
+    }
+
     /**
      * Construtor para criar um novo resultado de jogo.
      *
@@ -125,6 +131,19 @@ public class Result {
          * array representa um número escolhido ou sorteado.
          */
         public String[] numbers;
+
+        public BaseGame() {
+        }
+    }
+
+    public void saveToFile(String fileName) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.writeValue(new File(fileName), this);
+    }
+
+    public static Game loadFromFile(String fileName) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(new File(fileName), Game.class);
     }
 
     /**
@@ -208,6 +227,8 @@ public class Result {
          */
         public String[] trevos;
 
+        public MMilionaria() {
+        }
     }
 
     /**
@@ -279,6 +300,9 @@ public class Result {
          * O mês escolhido para a jogada.
          */
         public String month;
+
+        public DSorte() {
+        }
     }
 
     /**

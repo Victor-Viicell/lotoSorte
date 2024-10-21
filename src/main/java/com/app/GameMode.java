@@ -1,5 +1,6 @@
 package com.app;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -8,6 +9,10 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Representa um modo de jogo com suas características específicas.
@@ -78,6 +83,9 @@ public class GameMode {
      * @param startAtZero Indica se a contagem dos números deve começar do zero
      * @param costPerGame Custo por jogo
      */
+    public GameMode() {
+    }
+
     public GameMode(String name, Integer playableNumbers, Integer minSelections, Integer maxSelections,
             Boolean displayDecimal, Boolean startAtZero, float costPerGame) {
         this.name = name;
@@ -91,6 +99,16 @@ public class GameMode {
         this.diaDeSorte = new DiaDeSorte();
         this.superSete = new SuperSete();
         this.costPerGame = costPerGame;
+    }
+
+    public void saveToFile(String fileName) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.writeValue(new File(fileName), this);
+    }
+
+    public static Game loadFromFile(String fileName) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(new File(fileName), Game.class);
     }
 
     /**
@@ -144,7 +162,7 @@ public class GameMode {
      * @return Um array de objetos Numbers contendo os números gerados e suas
      * probabilidades.
      */
-    public final Numbers[] getNumbers(Integer playableNumbers, Boolean displayDecimal, Boolean startAtZero) {
+    public final static Numbers[] getNumbers(Integer playableNumbers, Boolean displayDecimal, Boolean startAtZero) {
         Numbers[] numerosGerados = new Numbers[playableNumbers + 1];
         int deslocamento = startAtZero ? 0 : 1;
         for (int i = 0; i < playableNumbers; i++) {
@@ -163,7 +181,7 @@ public class GameMode {
     /**
      * Classe interna que representa um número e sua probabilidade associada.
      */
-    public class Numbers {
+    public static class Numbers {
 
         /**
          * O número representado como uma string.
@@ -174,12 +192,16 @@ public class GameMode {
          * A probabilidade associada ao número.
          */
         public Float probability;
+
+        public Numbers() {
+        }
     }
 
     /**
      * Classe que representa o jogo Mais Milionária.
      */
-    public class MaisMilionaria {
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class MaisMilionaria {
 
         /**
          * Número mínimo de trevos que podem ser selecionados.
@@ -194,12 +216,13 @@ public class GameMode {
         /**
          * Array de objetos Trevo que representa os trevos disponíveis no jogo.
          */
+        @JsonProperty("trevo")
         public Trevo[] trevos;
 
         /**
          * Classe interna que representa um trevo individual no jogo.
          */
-        public class Trevo {
+        public static class Trevo {
 
             /**
              * Identificador do trevo.
@@ -210,6 +233,9 @@ public class GameMode {
              * Probabilidade associada ao trevo.
              */
             public Float probability;
+
+            public Trevo() {
+            }
         }
 
         /**
@@ -293,7 +319,7 @@ public class GameMode {
     /**
      * Classe que representa o jogo Dia de Sorte.
      */
-    public class DiaDeSorte {
+    public static class DiaDeSorte {
 
         /**
          * Array de objetos Months que armazena os meses do jogo.
@@ -303,7 +329,7 @@ public class GameMode {
         /**
          * Classe interna que representa um mês no jogo Dia de Sorte.
          */
-        public class Months {
+        public static class Months {
 
             /**
              * Nome do mês.
@@ -314,6 +340,9 @@ public class GameMode {
              * Probabilidade associada ao mês.
              */
             public Float probability;
+
+            public Months() {
+            }
         }
 
         /**
@@ -394,7 +423,7 @@ public class GameMode {
      * Representa o jogo Super Sete. Esta classe encapsula a lógica e estrutura
      * do jogo Super Sete.
      */
-    public class SuperSete {
+    public static class SuperSete {
 
         /**
          * Array de colunas que compõem o jogo Super Sete.
@@ -413,7 +442,7 @@ public class GameMode {
          * Classe interna que representa uma coluna do jogo Super Sete. Cada
          * coluna contém números, limites de seleção e probabilidades.
          */
-        public class Columns {
+        public static class Columns {
 
             /**
              * Array de números disponíveis para seleção na coluna. É
@@ -437,6 +466,9 @@ public class GameMode {
              * 1.0 (100%).
              */
             public Float probability = 1.0f;
+
+            public Columns() {
+            }
 
         }
 
@@ -491,6 +523,7 @@ public class GameMode {
                 columns[columnIndex].columnSelecteds = 1;
                 selected++;
             }
+            sortColumns(selection);
 
             // Segunda passagem: adiciona uma segunda seleção a cada coluna
             availableColumns = IntStream.range(0, columns.length).boxed().collect(Collectors.toList());
@@ -507,6 +540,7 @@ public class GameMode {
                     selected++;
                 }
             }
+            sortColumns(selection);
 
             // Terceira passagem: adiciona aleatoriamente uma terceira seleção às colunas até atingir o número de seleções
             availableColumns = IntStream.range(0, columns.length).boxed().collect(Collectors.toList());
@@ -524,6 +558,7 @@ public class GameMode {
                     selected++;
                 }
             }
+            sortColumns(selection);
 
             // Ordena os números dentro de cada coluna
             for (String[] column : selection) {
@@ -535,6 +570,12 @@ public class GameMode {
             return selection;
         }
 
+        private void sortColumns(String[][] selection) {
+            for (String[] column : selection) {
+                Arrays.sort(column, Comparator.nullsLast(Comparator.naturalOrder()));
+            }
+        }
+
         /**
          * Gera uma sequência de números para o jogo Super Seven.
          *
@@ -543,11 +584,16 @@ public class GameMode {
          */
         public final String[] genSuperSeven(int selections, String[][] result) {
             List<String> flatResult = new ArrayList<>();
-            for (String[] column : result) {
+            for (int i = 0; i < result.length; i++) {
+                String[] column = result[i];
                 for (String number : column) {
                     if (number != null) {
                         flatResult.add(number);
                     }
+                }
+                // Add a separator after each column, except for the last one
+                if (i < result.length - 1) {
+                    flatResult.add("|");
                 }
             }
             return flatResult.toArray(String[]::new);

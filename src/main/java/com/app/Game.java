@@ -1,5 +1,12 @@
 package com.app;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.Objects;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
 /**
  * Representa um jogo da loteria. Esta classe encapsula todas as informações e
  * operações relacionadas a um jogo específico.
@@ -46,6 +53,8 @@ public class Game {
      */
     public int numbers;
 
+    public int extraNumbersInput;
+
     /**
      * Custo total dos jogos gerados, formatado como string.
      */
@@ -60,32 +69,67 @@ public class Game {
      * @param extraNumbers O número de números extras (usado apenas para o modo
      * "+Milionária").
      */
-    public Game(GameMode game, int amount, int numbers, Integer extraNumbers) {
+    /**
+     * Construtor da classe Game. Inicializa um novo jogo com base nos
+     * parâmetros fornecidos.
+     *
+     * @param game O modo de jogo selecionado.
+     * @param amount A quantidade de jogos a serem gerados.
+     * @param numbers O número de números em cada jogo.
+     * @param extraNumbers O número de números extras (usado apenas para o modo
+     * "+Milionária").
+     * @throws IllegalArgumentException Se o modo de jogo for nulo.
+     */
+    public Game() {
+    }
+
+    public Game(GameMode game, int amount, int numbers, Integer extraNumbersInput) {
+        if (game == null) {
+            throw new IllegalArgumentException("GameMode cannot be null");
+        }
         // Inicializa as propriedades básicas do jogo
         this.gameMode = game;
         this.amount = amount;
         this.numbers = numbers;
+        this.extraNumbersInput = extraNumbersInput;
         this.games = new String[amount][numbers];
-        this.data = new Data();
 
         // Verifica o modo de jogo e realiza as inicializações específicas
-        if (gameMode.name.equals("+Milionária") && extraNumbers != null) {
-            // Inicializa o jogo Mais Milionária com números extras
-            this.maisMilionaria = new MaisMilionaria();
-            this.maisMilionaria.extraNumbers = extraNumbers;
-        } else if (gameMode.name.equals("Dia de Sorte")) {
-            // Inicializa o jogo Dia de Sorte
-            this.diaDeSorte = new DiaDeSorte();
-        } else if (gameMode.name.equals("Super Sete")) {
-            // Gera jogos específicos para o modo Super-Sete
-            this.games = superSete.genGameSuperSete();
-        } else {
-            // Gera jogos para os demais modos
-            this.games = GenGames();
+        switch (gameMode.name) {
+            case "+Milionária":
+                // Inicializa o jogo Mais Milionária
+                this.maisMilionaria = new MaisMilionaria();
+                this.games = genGames();
+                break;
+            case "Dia de Sorte":
+                // Inicializa o jogo Dia de Sorte
+                this.diaDeSorte = new DiaDeSorte();
+                this.games = genGames();
+                break;
+            case "Super Sete":
+                // Gera jogos específicos para o modo Super-Sete
+                this.superSete = new SuperSete();
+                this.games = this.superSete.genGameSuperSete();
+                break;
+            default:
+                // Gera jogos para os demais modos
+                this.games = genGames();
+                break;
         }
-
         // Calcula o custo total dos jogos gerados
         this.totalCost = getTotalCost();
+        this.data = new Data(game, this.games);
+    }
+
+    public void saveToFile(String fileName) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        mapper.writeValue(new File(fileName), this);
+    }
+
+    public static Game loadFromFile(String fileName) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(new File(fileName), Game.class);
     }
 
     /**
@@ -134,7 +178,7 @@ public class Game {
         formattedCost.append(costString.substring(integerPartLength));
         costString = formattedCost.toString();
 
-        return costString;
+        return "R$" + costString;
     }
 
     public class SuperSete {
@@ -162,6 +206,9 @@ public class Game {
             // Retorna a matriz com os jogos gerados
             return ssGames;
         }
+
+        public SuperSete() {
+        }
     }
 
     /**
@@ -176,10 +223,20 @@ public class Game {
      * variável 'amount'. O número de colunas é determinado pela variável
      * 'numbers'.
      */
-    public final String[][] GenGames() {
+    public final String[][] genGames() {
         String[][] gamesArray = new String[amount][numbers];
         for (int i = 0; i < amount; i++) {
-            gamesArray[i] = gameMode.genNumbers(numbers);
+            // Gera uma linha de números para o jogo atual
+            String[] gameRow = gameMode.genNumbers(numbers);
+
+            // Filtra valores nulos, ordena e converte de volta para um array
+            gameRow = Arrays.stream(gameRow)
+                    .filter(Objects::nonNull)
+                    .sorted()
+                    .toArray(String[]::new);
+
+            // Atribui a linha gerada à matriz de jogos
+            gamesArray[i] = gameRow;
         }
         return gamesArray;
     }
@@ -192,7 +249,7 @@ public class Game {
         /**
          * Número de números extras (trevos) a serem gerados.
          */
-        public Integer extraNumbers;
+        public Integer extraNumbers = 2;
 
         /**
          * Matriz contendo os trevos gerados para cada jogo.
@@ -205,10 +262,21 @@ public class Game {
          * @return Uma matriz de strings contendo os trevos gerados para cada
          * jogo.
          */
+        public MaisMilionaria() {
+            this.extraNumbers = extraNumbersInput;
+            this.trevos = genGameTrevos();
+        }
+
         public final String[][] genGameTrevos() {
+            if (extraNumbers == null) {
+                throw new IllegalStateException("extraNumbers is not initialized");
+            }
             String[][] gameTrevos = new String[amount][extraNumbers];
             for (int i = 0; i < amount; i++) {
-                gameTrevos[i] = gameMode.maisMilionaria.genTrevos(extraNumbers);
+                String[] trevosRow = gameMode.maisMilionaria.genTrevos(extraNumbers);
+                gameTrevos[i] = Arrays.stream(trevosRow)
+                        .filter(Objects::nonNull)
+                        .toArray(String[]::new);
             }
             return gameTrevos;
         }
@@ -236,12 +304,17 @@ public class Game {
             }
             return months;
         }
+
+        public DiaDeSorte() {
+        }
     }
 
     /**
      * Classe que representa os dados estatísticos do jogo.
      */
-    public class Data {
+    public static class Data {
+
+        private String[][] games;
 
         /**
          * Array de números pares
@@ -287,10 +360,11 @@ public class Game {
         /**
          * Construtor da classe Data. Inicializa todos os campos da classe.
          */
-        public Data() {
-            this.evenNumbers = getEvenNumbers();
-            this.oddNumbers = getOddNumbers();
-            this.primeNumbers = getPrimeNumbers();
+        public Data(GameMode gameMode, String[][] games) {
+            this.games = games;
+            this.evenNumbers = getEvenNumbers(gameMode);
+            this.oddNumbers = getOddNumbers(gameMode);
+            this.primeNumbers = getPrimeNumbers(gameMode);
             this.totalNumbers = getTotalNumbers();
             this.totalEvenNumbers = getTotalEvenNumbers();
             this.totalOddNumbers = getTotalOddNumbers();
@@ -300,12 +374,18 @@ public class Game {
             this.primeNumberPercentage = getPrimeNumberPercentage();
         }
 
+        public Data() {
+        }
+
         /**
          * Obtém os números pares do jogo.
          *
          * @return Array de números pares
          */
-        public final EvenNumbers[] getEvenNumbers() {
+        public final EvenNumbers[] getEvenNumbers(GameMode gameMode) {
+            if (gameMode == null || gameMode.numbers == null) {
+                return new EvenNumbers[0];
+            }
             this.evenNumbers = new EvenNumbers[gameMode.numbers.length];
             for (int i = 0; i < gameMode.numbers.length; i++) {
                 if (gameMode.numbers[i] != null && gameMode.numbers[i].number != null) {
@@ -324,7 +404,9 @@ public class Game {
                     }
                 }
             }
-            return this.evenNumbers;
+            return Arrays.stream(this.evenNumbers)
+                    .filter(Objects::nonNull)
+                    .toArray(EvenNumbers[]::new);
         }
 
         /**
@@ -332,7 +414,10 @@ public class Game {
          *
          * @return Array de números ímpares
          */
-        public final OddNumbers[] getOddNumbers() {
+        public final OddNumbers[] getOddNumbers(GameMode gameMode) {
+            if (gameMode == null || gameMode.numbers == null) {
+                return new OddNumbers[0];
+            }
             this.oddNumbers = new OddNumbers[gameMode.numbers.length];
             for (int i = 0; i < gameMode.numbers.length; i++) {
                 if (gameMode.numbers[i] != null && gameMode.numbers[i].number != null) {
@@ -351,7 +436,9 @@ public class Game {
                     }
                 }
             }
-            return this.oddNumbers;
+            return Arrays.stream(this.oddNumbers)
+                    .filter(Objects::nonNull)
+                    .toArray(OddNumbers[]::new);
         }
 
         /**
@@ -359,7 +446,11 @@ public class Game {
          *
          * @return Array de números primos
          */
-        public final PrimeNumbers[] getPrimeNumbers() {
+        public final PrimeNumbers[] getPrimeNumbers(GameMode gameMode) {
+            if (gameMode == null || gameMode.numbers == null) {
+                return new PrimeNumbers[0];
+            }
+
             this.primeNumbers = new PrimeNumbers[gameMode.numbers.length];
             for (int i = 0; i < gameMode.numbers.length; i++) {
                 if (gameMode.numbers[i] != null && gameMode.numbers[i].number != null) {
@@ -379,7 +470,9 @@ public class Game {
                     }
                 }
             }
-            return this.primeNumbers;
+            return Arrays.stream(this.primeNumbers)
+                    .filter(Objects::nonNull)
+                    .toArray(PrimeNumbers[]::new);
         }
 
         /**
@@ -389,19 +482,18 @@ public class Game {
          */
         public final int getTotalNumbers() {
             int totalNumber = 0;
-            for (EvenNumbers evenNumber : evenNumbers) {
-                if (evenNumber != null) {
-                    totalNumber += evenNumber.evenAmount;
+            if (evenNumbers != null) {
+                for (EvenNumbers evenNumber : evenNumbers) {
+                    if (evenNumber != null) {
+                        totalNumber += evenNumber.evenAmount;
+                    }
                 }
             }
-            for (OddNumbers oddNumber : oddNumbers) {
-                if (oddNumber != null) {
-                    totalNumber += oddNumber.oddAmount;
-                }
-            }
-            for (PrimeNumbers primeNumber : primeNumbers) {
-                if (primeNumber != null) {
-                    totalNumber += primeNumber.primeAmount;
+            if (oddNumbers != null) {
+                for (OddNumbers oddNumber : oddNumbers) {
+                    if (oddNumber != null) {
+                        totalNumber += oddNumber.oddAmount;
+                    }
                 }
             }
             return totalNumber;
@@ -503,7 +595,7 @@ public class Game {
         /**
          * Classe interna que representa um número par.
          */
-        public class EvenNumbers {
+        public static class EvenNumbers {
 
             /**
              * Número par
@@ -513,12 +605,15 @@ public class Game {
              * Quantidade de vezes que o número par aparece
              */
             public int evenAmount;
+
+            public EvenNumbers() {
+            }
         }
 
         /**
          * Classe interna que representa um número ímpar.
          */
-        public class OddNumbers {
+        public static class OddNumbers {
 
             /**
              * Número ímpar
@@ -528,12 +623,15 @@ public class Game {
              * Quantidade de vezes que o número ímpar aparece
              */
             public int oddAmount;
+
+            public OddNumbers() {
+            }
         }
 
         /**
          * Classe interna que representa um número primo.
          */
-        public class PrimeNumbers {
+        public static class PrimeNumbers {
 
             /**
              * Número primo
@@ -543,6 +641,9 @@ public class Game {
              * Quantidade de vezes que o número primo aparece
              */
             public int primeAmount;
+
+            public PrimeNumbers() {
+            }
         }
     }
 }
