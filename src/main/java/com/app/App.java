@@ -9,10 +9,13 @@ import java.util.List;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
@@ -49,6 +52,7 @@ public class App extends Application {
         new GameMode("Super Sete", 10, 7, 21, false, true, 2.50f)
     };
     private int currentNumberAmountValue;
+    private VBox jogosButtonsContainer;
 
     // Get system window size
     public static double width = Screen.getPrimary().getBounds().getWidth();
@@ -120,36 +124,74 @@ public class App extends Application {
         Button button2 = new Button("Gerar Resultado");
         button2.setPrefWidth(width);
 
-        Button button3 = new Button("Configurações");
-        button3.setPrefWidth(width);
-
         // Add action handlers to buttons
         button1.setOnAction(e -> openTab("Gerar Jogo"));
         button2.setOnAction(e -> openTab("Gerar Resultado"));
-        button3.setOnAction(e -> openTab("Configurações"));
 
-        sideMenu.getChildren().addAll(sideTabPane, button1, button2, button3);
+        sideMenu.getChildren().addAll(sideTabPane, button1, button2);
         return sideMenu;
     }
 
     private void loadGameTab(File gameFile) {
         try {
             Game loadedGame = Game.loadFromFile(gameFile.getAbsolutePath());
-            Tab gameTab = new Tab(gameFile.getName());
+            Tab gameTab = new Tab(gameFile.getName().replace(".json", ""));
             gameTab.setClosable(true);
-
-            VBox gameContent = new VBox(10);
-            gameContent.setPadding(new javafx.geometry.Insets(10));
+            GridPane gameTabPane = new GridPane();
+            gameTabPane.setPrefHeight(height);
+            VBox gameContent = new VBox(5);
+            gameContent.setPadding(new javafx.geometry.Insets(5));
+            gameContent.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+            gameContent.setPrefWidth(400);
+            gameContent.setPrefHeight(height);
+            for (int i = 0; i < loadedGame.games.length; i++) {
+                GridPane buttonsGrid = new GridPane();
+                Label gameNumber = new Label("Game: " + (i + 1));
+                String[] game = loadedGame.games[i];
+                List<Button> buttons = numbersButtons(game);
+                addGame(buttonsGrid, buttons);
+                gameContent.getChildren().addAll(gameNumber, buttonsGrid);
+                if (loadedGame.gameMode.name.equals("+Milionária")) {
+                    String[] trevos = loadedGame.maisMilionaria.trevos[i];
+                    List<Button> trevosButtons = numbersButtons(trevos);
+                    GridPane trevosGrid = new GridPane();
+                    Label trevosLabel = new Label("Trevos:");
+                    addGame(trevosGrid, trevosButtons);
+                    gameContent.getChildren().addAll(trevosLabel, trevosGrid);
+                }
+                if (loadedGame.gameMode.name.equals("Dia de Sorte")) {
+                    String month = loadedGame.diaDeSorte.month[i];
+                    Button monthButtons = new Button(month);
+                    GridPane monthGrid = new GridPane();
+                    Label monthLabel = new Label("Mês:");
+                    monthGrid.add(monthButtons, 0, 0);
+                    gameContent.getChildren().addAll(monthLabel, monthGrid);
+                }
+                // add a vertical line
+                if (i < loadedGame.games.length - 1) {
+                    Separator separator = new Separator();
+                    separator.setPrefWidth(gameContent.getPrefWidth());
+                    gameContent.getChildren().add(separator);
+                }
+            }
+            VBox gameData = new VBox(5);
+            gameData.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
+            gameData.setPrefWidth(300);
+            gameData.setPrefHeight(height);
+            gameData.setPadding(new javafx.geometry.Insets(5));
 
             Label gameModeLabel = new Label("Game Mode: " + loadedGame.gameMode.name);
             Label numberAmountLabel = new Label("Number Amount: " + loadedGame.numbers);
             Label gameAmountLabel = new Label("Game Amount: " + loadedGame.amount);
 
-            gameContent.getChildren().addAll(gameModeLabel, numberAmountLabel, gameAmountLabel);
+            gameData.getChildren().addAll(gameModeLabel, numberAmountLabel, gameAmountLabel);
 
             // Add more details about the loaded game as needed
             ScrollPane scrollPane = new ScrollPane(gameContent);
-            gameTab.setContent(scrollPane);
+            ScrollPane scrollPane2 = new ScrollPane(gameData);
+            gameTabPane.add(scrollPane, 0, 0);
+            gameTabPane.add(scrollPane2, 1, 0);
+            gameTab.setContent(gameTabPane);
 
             mainTabPane.getTabs().add(gameTab);
             mainTabPane.getSelectionModel().select(gameTab);
@@ -166,12 +208,13 @@ public class App extends Application {
 
             if (gameFiles != null) {
                 for (File gameFile : gameFiles) {
-                    HBox gameRow = new HBox(10);
-                    Button gameButton = new Button(gameFile.getName());
-                    gameButton.setPrefWidth(width / 6 - 60);
+                    VBox gameRow = new VBox(5);
+                    //remove .Json from name
+                    Button gameButton = new Button(gameFile.getName().replace(".json", ""));
+                    gameButton.setPrefWidth(width / 6 - 26);
                     gameButton.setOnAction(e -> loadGameTab(gameFile));
 
-                    Button deleteButton = new Button("Delete");
+                    Button deleteButton = new Button("Deletar");
                     deleteButton.setOnAction(e -> deleteGame(gameFile, buttonsContainer));
 
                     gameRow.getChildren().addAll(gameButton, deleteButton);
@@ -182,10 +225,20 @@ public class App extends Application {
     }
 
     private void deleteGame(File gameFile, VBox buttonsContainer) {
-        if (gameFile.delete()) {
+        // Adiciona um popup para confirmar a exclusão
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        // Define o ícone do alerta
+        Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+        stage.getIcons().add(icon);
+        alert.setTitle("Deletar Jogo");
+        alert.setHeaderText("Você tem certeza que deseja deletar este jogo?");
+        alert.setContentText("Esta ação não pode ser desfeita.");
+
+        // Verifica se o usuário confirmou a exclusão e tenta deletar o arquivo
+        if (alert.showAndWait().get() == ButtonType.OK && gameFile.delete()) {
             refreshGameList(buttonsContainer);
         } else {
-            System.err.println("Failed to delete the game file.");
+            System.err.println("Falha ao deletar o arquivo do jogo.");
         }
     }
 
@@ -196,10 +249,11 @@ public class App extends Application {
         scrollPaneGenGame.setPadding(new javafx.geometry.Insets(5));
         scrollPaneGenGame.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
 
-        VBox buttonsContainer = new VBox(10);
-        refreshGameList(buttonsContainer);
+        // Initialize and assign the instance variable
+        jogosButtonsContainer = new VBox(10);
+        refreshGameList(jogosButtonsContainer);
 
-        scrollPaneGenGame.setContent(buttonsContainer);
+        scrollPaneGenGame.setContent(jogosButtonsContainer);
         tabGenGame.setContent(scrollPaneGenGame);
         tabGenGame.setClosable(false);
     }
@@ -320,9 +374,6 @@ public class App extends Application {
             case "Gerar Resultado":
                 newTab.setContent(GenResult());
                 break;
-            case "Configurações":
-                newTab.setContent(Config());
-                break;
             default:
                 // Default content if tabName doesn't match any case
                 newTab.setContent(new VBox());
@@ -405,58 +456,72 @@ public class App extends Application {
         });
 
         generateButton.setOnAction(event -> {
-            try {
-                int selectedIndex = choiceBox.getSelectionModel().getSelectedIndex();
-                GameMode selectedGameMode = gameModes[selectedIndex];
+            // add a popup to confirm the generation
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            Stage stage = (Stage) generateButton.getScene().getWindow();
+            alert.initOwner(stage);
+            stage.getIcons().add(icon);
+            alert.setTitle("Confirmar Geração de Jogos");
+            alert.setHeaderText("Deseja realmente gerar os jogos?");
+            alert.setContentText("Ao confirmar, os jogos serão gerados e salvos em um arquivo.");
+            if (alert.showAndWait().get() == ButtonType.OK) {
+                try {
+                    int selectedIndex = choiceBox.getSelectionModel().getSelectedIndex();
+                    GameMode selectedGameMode = gameModes[selectedIndex];
 
-                // Use the currentNumberAmountValue
-                int numberAmountValue = currentNumberAmountValue;
+                    // Use the currentNumberAmountValue
+                    int numberAmountValue = currentNumberAmountValue;
 
-                // Get the selected number of trevos (for Mais Milionária)
-                int trevoAmountValue = 0;
-                if (selectedIndex == 0 && trevoAmount.getValue() != null) {
-                    String selectedTrevoAmount = trevoAmount.getValue();
-                    trevoAmountValue = Integer.parseInt(selectedTrevoAmount.split(" ")[0]);
+                    // Get the selected number of trevos (for Mais Milionária)
+                    int trevoAmountValue = 0;
+                    if (selectedIndex == 0 && trevoAmount.getValue() != null) {
+                        String selectedTrevoAmount = trevoAmount.getValue();
+                        trevoAmountValue = Integer.parseInt(selectedTrevoAmount.split(" ")[0]);
+                    }
+
+                    // Get the number of games to generate
+                    int gameAmount = Integer.parseInt(numberAmountField.getText());
+
+                    // Create a new Game object with the selected parameters
+                    Game game = new Game(selectedGameMode, gameAmount, numberAmountValue, trevoAmountValue);
+
+                    // Generate the current date formatted
+                    String generationDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+
+                    // Create the game file name
+                    String gameFileName = selectedGameMode.name + "_" + generationDate + ".json";
+                    String filePath = SRC_FOLDER_PATH_GAMES + gameFileName;
+
+                    // Create the directory if it doesn't exist
+                    createDirectoryIfNotExists(SRC_FOLDER_PATH_GAMES);
+
+                    // Create file in path
+                    File file = new File(filePath);
+                    // Check if file exists
+                    if (file.exists()) {
+                        // If file exists, delete it
+                        file.delete();
+                    }
+                    // Save the game to a file
+                    game.saveToFile(filePath);
+                    Tab jogosTab = mainTabPane.getTabs().stream()
+                            .filter(tab -> tab.getText().equals("Jogos"))
+                            .findFirst()
+                            .orElse(null);
+                    refreshGameList(jogosButtonsContainer);
+
+                    if (jogosTab != null) {
+                        ScrollPane scrollPane = (ScrollPane) jogosTab.getContent();
+                        VBox buttonsContainer = (VBox) scrollPane.getContent();
+                        refreshGameList(buttonsContainer);
+                    }
+                    // ... (add any additional logic here, such as showing a success message)
+                } catch (Exception e) {
+                    System.err.println("An error occurred: " + e.getMessage());
                 }
-
-                // Get the number of games to generate
-                int gameAmount = Integer.parseInt(numberAmountField.getText());
-
-                // Create a new Game object with the selected parameters
-                Game game = new Game(selectedGameMode, gameAmount, numberAmountValue, trevoAmountValue);
-
-                // Generate the current date formatted
-                String generationDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
-
-                // Create the game file name
-                String gameFileName = selectedGameMode.name + "_" + generationDate + ".json";
-                String filePath = SRC_FOLDER_PATH_GAMES + gameFileName;
-
-                // Create the directory if it doesn't exist
-                createDirectoryIfNotExists(SRC_FOLDER_PATH_GAMES);
-
-                // Create file in path
-                File file = new File(filePath);
-                // Check if file exists
-                if (file.exists()) {
-                    // If file exists, delete it
-                    file.delete();
-                }
-                // Save the game to a file
-                game.saveToFile(filePath);
-                Tab jogosTab = mainTabPane.getTabs().stream()
-                        .filter(tab -> tab.getText().equals("Jogos"))
-                        .findFirst()
-                        .orElse(null);
-
-                if (jogosTab != null) {
-                    ScrollPane scrollPane = (ScrollPane) jogosTab.getContent();
-                    VBox buttonsContainer = (VBox) scrollPane.getContent();
-                    refreshGameList(buttonsContainer);
-                }
-                // ... (add any additional logic here, such as showing a success message)
-            } catch (Exception e) {
-                System.err.println("An error occurred: " + e.getMessage());
+            } else {
+                // User canceled the operation
+                System.out.println("Operation canceled by user.");
             }
         });
 
@@ -550,6 +615,46 @@ public class App extends Application {
         }
     }
 
+    /**
+     * Adiciona botões de jogo a um GridPane, organizando-os em colunas.
+     *
+     * @param gridPane O GridPane onde os botões serão adicionados.
+     * @param buttons A lista de botões a serem adicionados ao GridPane.
+     */
+    private void addGame(GridPane gridPane, List<Button> buttons) {
+        int currentCol = 0;
+        int currentRow = 0;
+        int columns = 10; // Define o número de colunas desejado
+
+        for (int i = 0; i < buttons.size(); i++) {
+            Button button = buttons.get(i);
+            if (button.getText().startsWith("Coluna")) {
+                // Se o botão é uma coluna, adiciona em uma nova linha
+                currentRow++;
+                currentCol = 0;
+                gridPane.add(button, currentCol, currentRow);
+                currentCol++;
+            } else {
+                // Para botões numéricos, usa a lógica de grade
+                int row = currentRow;
+                int col = currentCol % columns;
+                gridPane.add(button, col, row);
+                currentCol++;
+
+                // Se atingir o número máximo de colunas, avança para a próxima linha
+                if (currentCol % columns == 0) {
+                    currentRow++;
+                    currentCol = 0;
+                }
+            }
+        }
+
+        // Configura o espaçamento e a visibilidade do GridPane
+        gridPane.setHgap(5);
+        gridPane.setVgap(5);
+        gridPane.setVisible(true);
+    }
+
     private List<Button> monthsButtons(GameMode gameMode) {
         List<Button> buttonList = new ArrayList<>();
         int currentMonth = 0;
@@ -588,17 +693,31 @@ public class App extends Application {
         return buttonList;
     }
 
+    private List<Button> numbersButtons(String[] game) {
+        List<Button> buttonList = new ArrayList<>();
+        int currentNumber = 0;
+        int col = 1;
+        while (currentNumber < game.length) {
+            Button button = new Button(game[currentNumber]);
+            button.setId("button" + currentNumber);
+            if ("|".equals(game[currentNumber])) {
+                game[currentNumber] = "Coluna " + col;
+                col++;
+                button.setDisable(true);
+                button.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                button.setText(game[currentNumber]);
+            }
+
+            buttonList.add(button);
+            currentNumber++;
+        }
+
+        return buttonList;
+    }
+
     private VBox GenResult() {
         VBox homeTab = new VBox();
         homeTab.setBackground(new Background(new BackgroundFill(Color.BLUE, null, null)));
-
-        // Add your content here
-        return homeTab;
-    }
-
-    private VBox Config() {
-        VBox homeTab = new VBox();
-        homeTab.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
 
         // Add your content here
         return homeTab;

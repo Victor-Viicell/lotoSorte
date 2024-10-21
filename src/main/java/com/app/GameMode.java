@@ -585,16 +585,17 @@ public class GameMode {
         public final String[] genSuperSeven(int selections, String[][] result) {
             List<String> flatResult = new ArrayList<>();
             for (int i = 0; i < result.length; i++) {
+                // Add a separator before each column
+                if (i < result.length) {
+                    flatResult.add("|");
+                }
                 String[] column = result[i];
                 for (String number : column) {
                     if (number != null) {
                         flatResult.add(number);
                     }
                 }
-                // Add a separator after each column, except for the last one
-                if (i < result.length - 1) {
-                    flatResult.add("|");
-                }
+
             }
             return flatResult.toArray(String[]::new);
         }

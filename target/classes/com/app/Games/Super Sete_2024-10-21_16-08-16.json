@@ -1,0 +1,416 @@
+{
+  "gameMode" : {
+    "name" : "Super Sete",
+    "playableNumbers" : 10,
+    "minSelections" : 7,
+    "maxSelections" : 21,
+    "numbers" : [ {
+      "number" : "0",
+      "probability" : 1.0
+    }, {
+      "number" : "1",
+      "probability" : 1.0
+    }, {
+      "number" : "2",
+      "probability" : 1.0
+    }, {
+      "number" : "3",
+      "probability" : 1.0
+    }, {
+      "number" : "4",
+      "probability" : 1.0
+    }, {
+      "number" : "5",
+      "probability" : 1.0
+    }, {
+      "number" : "6",
+      "probability" : 1.0
+    }, {
+      "number" : "7",
+      "probability" : 1.0
+    }, {
+      "number" : "8",
+      "probability" : 1.0
+    }, {
+      "number" : "9",
+      "probability" : 1.0
+    }, null ],
+    "displayDecimal" : false,
+    "startAtZero" : true,
+    "costPerGame" : 2.5,
+    "maisMilionaria" : {
+      "minTrevos" : 2,
+      "maxTrevos" : 6,
+      "trevo" : [ {
+        "trevo" : "1",
+        "probability" : 1.0
+      }, {
+        "trevo" : "2",
+        "probability" : 1.0
+      }, {
+        "trevo" : "3",
+        "probability" : 1.0
+      }, {
+        "trevo" : "4",
+        "probability" : 1.0
+      }, {
+        "trevo" : "5",
+        "probability" : 1.0
+      }, {
+        "trevo" : "6",
+        "probability" : 1.0
+      } ]
+    },
+    "diaDeSorte" : {
+      "months" : [ {
+        "month" : "Janeiro",
+        "probability" : 1.0
+      }, {
+        "month" : "Fevereiro",
+        "probability" : 1.0
+      }, {
+        "month" : "Março",
+        "probability" : 1.0
+      }, {
+        "month" : "Abril",
+        "probability" : 1.0
+      }, {
+        "month" : "Maio",
+        "probability" : 1.0
+      }, {
+        "month" : "Junho",
+        "probability" : 1.0
+      }, {
+        "month" : "Julho",
+        "probability" : 1.0
+      }, {
+        "month" : "Agosto",
+        "probability" : 1.0
+      }, {
+        "month" : "Setembro",
+        "probability" : 1.0
+      }, {
+        "month" : "Outubro",
+        "probability" : 1.0
+      }, {
+        "month" : "Novembro",
+        "probability" : 1.0
+      }, {
+        "month" : "Dezembro",
+        "probability" : 1.0
+      } ]
+    },
+    "superSete" : {
+      "columns" : [ {
+        "numbers" : [ {
+          "number" : "0",
+          "probability" : 1.0
+        }, {
+          "number" : "1",
+          "probability" : 1.0
+        }, {
+          "number" : "2",
+          "probability" : 1.0
+        }, {
+          "number" : "3",
+          "probability" : 1.0
+        }, {
+          "number" : "4",
+          "probability" : 1.0
+        }, {
+          "number" : "5",
+          "probability" : 1.0
+        }, {
+          "number" : "6",
+          "probability" : 1.0
+        }, {
+          "number" : "7",
+          "probability" : 1.0
+        }, {
+          "number" : "8",
+          "probability" : 1.0
+        }, {
+          "number" : "9",
+          "probability" : 1.0
+        }, null ],
+        "columnSelectionLimit" : 3,
+        "columnSelecteds" : 0,
+        "probability" : 1.0
+      }, {
+        "numbers" : [ {
+          "number" : "0",
+          "probability" : 1.0
+        }, {
+          "number" : "1",
+          "probability" : 1.0
+        }, {
+          "number" : "2",
+          "probability" : 1.0
+        }, {
+          "number" : "3",
+          "probability" : 1.0
+        }, {
+          "number" : "4",
+          "probability" : 1.0
+        }, {
+          "number" : "5",
+          "probability" : 1.0
+        }, {
+          "number" : "6",
+          "probability" : 1.0
+        }, {
+          "number" : "7",
+          "probability" : 1.0
+        }, {
+          "number" : "8",
+          "probability" : 1.0
+        }, {
+          "number" : "9",
+          "probability" : 1.0
+        }, null ],
+        "columnSelectionLimit" : 3,
+        "columnSelecteds" : 0,
+        "probability" : 1.0
+      }, {
+        "numbers" : [ {
+          "number" : "0",
+          "probability" : 1.0
+        }, {
+          "number" : "1",
+          "probability" : 1.0
+        }, {
+          "number" : "2",
+          "probability" : 1.0
+        }, {
+          "number" : "3",
+          "probability" : 1.0
+        }, {
+          "number" : "4",
+          "probability" : 1.0
+        }, {
+          "number" : "5",
+          "probability" : 1.0
+        }, {
+          "number" : "6",
+          "probability" : 1.0
+        }, {
+          "number" : "7",
+          "probability" : 1.0
+        }, {
+          "number" : "8",
+          "probability" : 1.0
+        }, {
+          "number" : "9",
+          "probability" : 1.0
+        }, null ],
+        "columnSelectionLimit" : 3,
+        "columnSelecteds" : 0,
+        "probability" : 1.0
+      }, {
+        "numbers" : [ {
+          "number" : "0",
+          "probability" : 1.0
+        }, {
+          "number" : "1",
+          "probability" : 1.0
+        }, {
+          "number" : "2",
+          "probability" : 1.0
+        }, {
+          "number" : "3",
+          "probability" : 1.0
+        }, {
+          "number" : "4",
+          "probability" : 1.0
+        }, {
+          "number" : "5",
+          "probability" : 1.0
+        }, {
+          "number" : "6",
+          "probability" : 1.0
+        }, {
+          "number" : "7",
+          "probability" : 1.0
+        }, {
+          "number" : "8",
+          "probability" : 1.0
+        }, {
+          "number" : "9",
+          "probability" : 1.0
+        }, null ],
+        "columnSelectionLimit" : 3,
+        "columnSelecteds" : 0,
+        "probability" : 1.0
+      }, {
+        "numbers" : [ {
+          "number" : "0",
+          "probability" : 1.0
+        }, {
+          "number" : "1",
+          "probability" : 1.0
+        }, {
+          "number" : "2",
+          "probability" : 1.0
+        }, {
+          "number" : "3",
+          "probability" : 1.0
+        }, {
+          "number" : "4",
+          "probability" : 1.0
+        }, {
+          "number" : "5",
+          "probability" : 1.0
+        }, {
+          "number" : "6",
+          "probability" : 1.0
+        }, {
+          "number" : "7",
+          "probability" : 1.0
+        }, {
+          "number" : "8",
+          "probability" : 1.0
+        }, {
+          "number" : "9",
+          "probability" : 1.0
+        }, null ],
+        "columnSelectionLimit" : 3,
+        "columnSelecteds" : 0,
+        "probability" : 1.0
+      }, {
+        "numbers" : [ {
+          "number" : "0",
+          "probability" : 1.0
+        }, {
+          "number" : "1",
+          "probability" : 1.0
+        }, {
+          "number" : "2",
+          "probability" : 1.0
+        }, {
+          "number" : "3",
+          "probability" : 1.0
+        }, {
+          "number" : "4",
+          "probability" : 1.0
+        }, {
+          "number" : "5",
+          "probability" : 1.0
+        }, {
+          "number" : "6",
+          "probability" : 1.0
+        }, {
+          "number" : "7",
+          "probability" : 1.0
+        }, {
+          "number" : "8",
+          "probability" : 1.0
+        }, {
+          "number" : "9",
+          "probability" : 1.0
+        }, null ],
+        "columnSelectionLimit" : 3,
+        "columnSelecteds" : 0,
+        "probability" : 1.0
+      }, {
+        "numbers" : [ {
+          "number" : "0",
+          "probability" : 1.0
+        }, {
+          "number" : "1",
+          "probability" : 1.0
+        }, {
+          "number" : "2",
+          "probability" : 1.0
+        }, {
+          "number" : "3",
+          "probability" : 1.0
+        }, {
+          "number" : "4",
+          "probability" : 1.0
+        }, {
+          "number" : "5",
+          "probability" : 1.0
+        }, {
+          "number" : "6",
+          "probability" : 1.0
+        }, {
+          "number" : "7",
+          "probability" : 1.0
+        }, {
+          "number" : "8",
+          "probability" : 1.0
+        }, {
+          "number" : "9",
+          "probability" : 1.0
+        }, null ],
+        "columnSelectionLimit" : 3,
+        "columnSelecteds" : 0,
+        "probability" : 1.0
+      } ]
+    }
+  },
+  "games" : [ [ "|", "1", "|", "2", "|", "0", "|", "6", "|", "7", "|", "8", "|", "5" ], [ "|", "0", "|", "3", "|", "0", "|", "0", "|", "5", "|", "0", "|", "7" ], [ "|", "1", "|", "0", "|", "9", "|", "3", "|", "4", "|", "4", "|", "6" ], [ "|", "3", "|", "2", "|", "5", "|", "3", "|", "2", "|", "3", "|", "4" ], [ "|", "3", "|", "2", "|", "6", "|", "4", "|", "5", "|", "1", "|", "6" ], [ "|", "3", "|", "1", "|", "9", "|", "1", "|", "8", "|", "4", "|", "9" ], [ "|", "4", "|", "6", "|", "0", "|", "1", "|", "0", "|", "9", "|", "7" ], [ "|", "3", "|", "8", "|", "3", "|", "2", "|", "1", "|", "6", "|", "5" ], [ "|", "2", "|", "5", "|", "4", "|", "9", "|", "8", "|", "4", "|", "2" ], [ "|", "5", "|", "0", "|", "8", "|", "8", "|", "6", "|", "1", "|", "5" ] ],
+  "data" : {
+    "evenNumbers" : [ {
+      "evenNumber" : "0",
+      "evenAmount" : 9
+    }, {
+      "evenNumber" : "2",
+      "evenAmount" : 7
+    }, {
+      "evenNumber" : "4",
+      "evenAmount" : 8
+    }, {
+      "evenNumber" : "6",
+      "evenAmount" : 7
+    }, {
+      "evenNumber" : "8",
+      "evenAmount" : 6
+    } ],
+    "oddNumbers" : [ {
+      "oddNumber" : "1",
+      "oddAmount" : 8
+    }, {
+      "oddNumber" : "3",
+      "oddAmount" : 9
+    }, {
+      "oddNumber" : "5",
+      "oddAmount" : 8
+    }, {
+      "oddNumber" : "7",
+      "oddAmount" : 3
+    }, {
+      "oddNumber" : "9",
+      "oddAmount" : 5
+    } ],
+    "primeNumbers" : [ {
+      "primeNumber" : "2",
+      "primeAmount" : 7
+    }, {
+      "primeNumber" : "3",
+      "primeAmount" : 9
+    }, {
+      "primeNumber" : "5",
+      "primeAmount" : 8
+    }, {
+      "primeNumber" : "7",
+      "primeAmount" : 3
+    } ],
+    "totalNumbers" : 70,
+    "totalEvenNumbers" : 37,
+    "totalOddNumbers" : 33,
+    "totalPrimeNumbers" : 27,
+    "evenNumberPercentage" : 52.857143,
+    "oddNumberPercentage" : 47.142857,
+    "primeNumberPercentage" : 38.57143
+  },
+  "maisMilionaria" : null,
+  "diaDeSorte" : null,
+  "superSete" : {
+    "columnNumbers" : [ [ [ "1", null, null ], [ "2", null, null ], [ "0", null, null ], [ "6", null, null ], [ "7", null, null ], [ "8", null, null ], [ "5", null, null ] ], [ [ "0", null, null ], [ "3", null, null ], [ "0", null, null ], [ "0", null, null ], [ "5", null, null ], [ "0", null, null ], [ "7", null, null ] ], [ [ "1", null, null ], [ "0", null, null ], [ "9", null, null ], [ "3", null, null ], [ "4", null, null ], [ "4", null, null ], [ "6", null, null ] ], [ [ "3", null, null ], [ "2", null, null ], [ "5", null, null ], [ "3", null, null ], [ "2", null, null ], [ "3", null, null ], [ "4", null, null ] ], [ [ "3", null, null ], [ "2", null, null ], [ "6", null, null ], [ "4", null, null ], [ "5", null, null ], [ "1", null, null ], [ "6", null, null ] ], [ [ "3", null, null ], [ "1", null, null ], [ "9", null, null ], [ "1", null, null ], [ "8", null, null ], [ "4", null, null ], [ "9", null, null ] ], [ [ "4", null, null ], [ "6", null, null ], [ "0", null, null ], [ "1", null, null ], [ "0", null, null ], [ "9", null, null ], [ "7", null, null ] ], [ [ "3", null, null ], [ "8", null, null ], [ "3", null, null ], [ "2", null, null ], [ "1", null, null ], [ "6", null, null ], [ "5", null, null ] ], [ [ "2", null, null ], [ "5", null, null ], [ "4", null, null ], [ "9", null, null ], [ "8", null, null ], [ "4", null, null ], [ "2", null, null ] ], [ [ "5", null, null ], [ "0", null, null ], [ "8", null, null ], [ "8", null, null ], [ "6", null, null ], [ "1", null, null ], [ "5", null, null ] ] ]
+  },
+  "amount" : 10,
+  "numbers" : 7,
+  "extraNumbersInput" : 0,
+  "totalCost" : "R$25,00"
+}

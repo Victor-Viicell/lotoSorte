@@ -1,42 +1,105 @@
 {
   "gameMode" : {
-    "name" : "Super Sete",
-    "playableNumbers" : 10,
+    "name" : "Dia de Sorte",
+    "playableNumbers" : 31,
     "minSelections" : 7,
-    "maxSelections" : 21,
+    "maxSelections" : 15,
     "numbers" : [ {
-      "number" : "0",
+      "number" : "01",
       "probability" : 1.0
     }, {
-      "number" : "1",
+      "number" : "02",
       "probability" : 1.0
     }, {
-      "number" : "2",
+      "number" : "03",
       "probability" : 1.0
     }, {
-      "number" : "3",
+      "number" : "04",
       "probability" : 1.0
     }, {
-      "number" : "4",
+      "number" : "05",
       "probability" : 1.0
     }, {
-      "number" : "5",
+      "number" : "06",
       "probability" : 1.0
     }, {
-      "number" : "6",
+      "number" : "07",
       "probability" : 1.0
     }, {
-      "number" : "7",
+      "number" : "08",
       "probability" : 1.0
     }, {
-      "number" : "8",
+      "number" : "09",
       "probability" : 1.0
     }, {
-      "number" : "9",
+      "number" : "10",
+      "probability" : 1.0
+    }, {
+      "number" : "11",
+      "probability" : 1.0
+    }, {
+      "number" : "12",
+      "probability" : 1.0
+    }, {
+      "number" : "13",
+      "probability" : 1.0
+    }, {
+      "number" : "14",
+      "probability" : 1.0
+    }, {
+      "number" : "15",
+      "probability" : 1.0
+    }, {
+      "number" : "16",
+      "probability" : 1.0
+    }, {
+      "number" : "17",
+      "probability" : 1.0
+    }, {
+      "number" : "18",
+      "probability" : 1.0
+    }, {
+      "number" : "19",
+      "probability" : 1.0
+    }, {
+      "number" : "20",
+      "probability" : 1.0
+    }, {
+      "number" : "21",
+      "probability" : 1.0
+    }, {
+      "number" : "22",
+      "probability" : 1.0
+    }, {
+      "number" : "23",
+      "probability" : 1.0
+    }, {
+      "number" : "24",
+      "probability" : 1.0
+    }, {
+      "number" : "25",
+      "probability" : 1.0
+    }, {
+      "number" : "26",
+      "probability" : 1.0
+    }, {
+      "number" : "27",
+      "probability" : 1.0
+    }, {
+      "number" : "28",
+      "probability" : 1.0
+    }, {
+      "number" : "29",
+      "probability" : 1.0
+    }, {
+      "number" : "30",
+      "probability" : 1.0
+    }, {
+      "number" : "31",
       "probability" : 1.0
     }, null ],
-    "displayDecimal" : false,
-    "startAtZero" : true,
+    "displayDecimal" : true,
+    "startAtZero" : false,
     "costPerGame" : 2.5,
     "maisMilionaria" : {
       "minTrevos" : 2,
@@ -349,68 +412,152 @@
       } ]
     }
   },
-  "games" : [ [ "9", "|", "4", "|", "0", "|", "9", "|", "2", "|", "0", "|", "3" ], [ "7", "|", "8", "|", "0", "|", "5", "|", "1", "|", "7", "|", "7" ], [ "8", "|", "2", "|", "3", "|", "8", "|", "3", "|", "1", "|", "4" ] ],
+  "games" : [ [ "08", "10", "11", "13", "21", "28", "30" ], [ "06", "11", "13", "16", "20", "21", "22" ], [ "02", "05", "09", "10", "20", "22", "30" ], [ "11", "15", "17", "19", "21", "27", "30" ], [ "03", "10", "19", "24", "27", "28", "30" ], [ "02", "03", "14", "15", "17", "26", "31" ], [ "02", "12", "13", "14", "15", "18", "31" ], [ "04", "09", "15", "22", "25", "29", "31" ], [ "04", "08", "09", "14", "21", "24", "25" ], [ "01", "03", "17", "18", "20", "21", "31" ] ],
   "data" : {
     "evenNumbers" : [ {
-      "evenNumber" : "0",
+      "evenNumber" : "02",
       "evenAmount" : 3
     }, {
-      "evenNumber" : "2",
+      "evenNumber" : "04",
       "evenAmount" : 2
     }, {
-      "evenNumber" : "4",
+      "evenNumber" : "06",
+      "evenAmount" : 1
+    }, {
+      "evenNumber" : "08",
       "evenAmount" : 2
     }, {
-      "evenNumber" : "6",
-      "evenAmount" : 0
-    }, {
-      "evenNumber" : "8",
+      "evenNumber" : "10",
       "evenAmount" : 3
+    }, {
+      "evenNumber" : "12",
+      "evenAmount" : 1
+    }, {
+      "evenNumber" : "14",
+      "evenAmount" : 3
+    }, {
+      "evenNumber" : "16",
+      "evenAmount" : 1
+    }, {
+      "evenNumber" : "18",
+      "evenAmount" : 2
+    }, {
+      "evenNumber" : "20",
+      "evenAmount" : 3
+    }, {
+      "evenNumber" : "22",
+      "evenAmount" : 3
+    }, {
+      "evenNumber" : "24",
+      "evenAmount" : 2
+    }, {
+      "evenNumber" : "26",
+      "evenAmount" : 1
+    }, {
+      "evenNumber" : "28",
+      "evenAmount" : 2
+    }, {
+      "evenNumber" : "30",
+      "evenAmount" : 4
     } ],
     "oddNumbers" : [ {
-      "oddNumber" : "1",
-      "oddAmount" : 2
-    }, {
-      "oddNumber" : "3",
-      "oddAmount" : 3
-    }, {
-      "oddNumber" : "5",
+      "oddNumber" : "01",
       "oddAmount" : 1
     }, {
-      "oddNumber" : "7",
+      "oddNumber" : "03",
       "oddAmount" : 3
     }, {
-      "oddNumber" : "9",
+      "oddNumber" : "05",
+      "oddAmount" : 1
+    }, {
+      "oddNumber" : "07",
+      "oddAmount" : 0
+    }, {
+      "oddNumber" : "09",
+      "oddAmount" : 3
+    }, {
+      "oddNumber" : "11",
+      "oddAmount" : 3
+    }, {
+      "oddNumber" : "13",
+      "oddAmount" : 3
+    }, {
+      "oddNumber" : "15",
+      "oddAmount" : 4
+    }, {
+      "oddNumber" : "17",
+      "oddAmount" : 3
+    }, {
+      "oddNumber" : "19",
       "oddAmount" : 2
+    }, {
+      "oddNumber" : "21",
+      "oddAmount" : 5
+    }, {
+      "oddNumber" : "23",
+      "oddAmount" : 0
+    }, {
+      "oddNumber" : "25",
+      "oddAmount" : 2
+    }, {
+      "oddNumber" : "27",
+      "oddAmount" : 2
+    }, {
+      "oddNumber" : "29",
+      "oddAmount" : 1
+    }, {
+      "oddNumber" : "31",
+      "oddAmount" : 4
     } ],
     "primeNumbers" : [ {
-      "primeNumber" : "2",
-      "primeAmount" : 2
-    }, {
-      "primeNumber" : "3",
+      "primeNumber" : "02",
       "primeAmount" : 3
     }, {
-      "primeNumber" : "5",
+      "primeNumber" : "03",
+      "primeAmount" : 3
+    }, {
+      "primeNumber" : "05",
       "primeAmount" : 1
     }, {
-      "primeNumber" : "7",
+      "primeNumber" : "07",
+      "primeAmount" : 0
+    }, {
+      "primeNumber" : "11",
       "primeAmount" : 3
+    }, {
+      "primeNumber" : "13",
+      "primeAmount" : 3
+    }, {
+      "primeNumber" : "17",
+      "primeAmount" : 3
+    }, {
+      "primeNumber" : "19",
+      "primeAmount" : 2
+    }, {
+      "primeNumber" : "23",
+      "primeAmount" : 0
+    }, {
+      "primeNumber" : "29",
+      "primeAmount" : 1
+    }, {
+      "primeNumber" : "31",
+      "primeAmount" : 4
     } ],
-    "totalNumbers" : 21,
-    "totalEvenNumbers" : 10,
-    "totalOddNumbers" : 11,
-    "totalPrimeNumbers" : 9,
-    "evenNumberPercentage" : 47.61905,
-    "oddNumberPercentage" : 52.380955,
-    "primeNumberPercentage" : 42.857143
+    "totalNumbers" : 70,
+    "totalEvenNumbers" : 33,
+    "totalOddNumbers" : 37,
+    "totalPrimeNumbers" : 23,
+    "evenNumberPercentage" : 47.142857,
+    "oddNumberPercentage" : 52.857143,
+    "primeNumberPercentage" : 32.857143
   },
   "maisMilionaria" : null,
-  "diaDeSorte" : null,
-  "superSete" : {
-    "columnNumbers" : [ [ [ "9", null, null ], [ "4", null, null ], [ "0", null, null ], [ "9", null, null ], [ "2", null, null ], [ "0", null, null ], [ "3", null, null ] ], [ [ "7", null, null ], [ "8", null, null ], [ "0", null, null ], [ "5", null, null ], [ "1", null, null ], [ "7", null, null ], [ "7", null, null ] ], [ [ "8", null, null ], [ "2", null, null ], [ "3", null, null ], [ "8", null, null ], [ "3", null, null ], [ "1", null, null ], [ "4", null, null ] ] ]
+  "diaDeSorte" : {
+    "month" : [ "Outubro", "Janeiro", "Outubro", "Janeiro", "Março", "Agosto", "Fevereiro", "Novembro", "Agosto", "Abril" ]
   },
-  "amount" : 3,
+  "superSete" : null,
+  "amount" : 10,
   "numbers" : 7,
   "extraNumbersInput" : 0,
-  "totalCost" : "R$7,50"
+  "totalCost" : "R$25,00"
 }
