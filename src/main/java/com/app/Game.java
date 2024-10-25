@@ -4,6 +4,10 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Objects;
 
+import com.app.GameMode.MaisMilionaria.Trevo;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -123,8 +127,24 @@ public class Game {
 
     public void saveToFile(String fileName) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
+        if (this.gameMode.maisMilionaria != null) {
+            System.out.println("Mais Milionária Trevo probabilities during save:");
+            for (GameMode.MaisMilionaria.Trevo trevo : this.gameMode.maisMilionaria.trevos) {
+                System.out.println("Trevo " + trevo.trevo + ": " + String.format("%.2f%%", trevo.probability * 100));
+            }
+        }
+
+        if (this.maisMilionaria != null) {
+            for (Trevo trevo : this.gameMode.maisMilionaria.trevos) {
+                if (trevo.probability == null) {
+                    throw new IllegalStateException("Trevo probability cannot be null");
+                }
+            }
+        }
+        mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.writeValue(new File(fileName), this);
+        System.out.println("File saved successfully!");
     }
 
     public static Game loadFromFile(String fileName) throws Exception {
@@ -314,8 +334,18 @@ public class Game {
      */
     public static class Data {
 
-        private String[][] games;
+        @JsonIgnore
+        public String[][] games;
 
+        // Add getter
+        public String[][] getGames() {
+            return games;
+        }
+
+        // Add setter
+        public void setGames(String[][] games) {
+            this.games = games;
+        }
         /**
          * Array de números pares
          */
@@ -580,7 +610,7 @@ public class Game {
          * @param num Número a ser verificado
          * @return true se o número for primo, false caso contrário
          */
-        private boolean isPrime(int num) {
+        public static boolean isPrime(int num) {
             if (num <= 1) {
                 return false;
             }
@@ -590,6 +620,18 @@ public class Game {
                 }
             }
             return true;
+        }
+
+        public static boolean isComposite(int num) {
+            if (num <= 1) {
+                return false;
+            }
+            for (int i = 2; i <= Math.sqrt(num); i++) {
+                if (num % i == 0) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /**

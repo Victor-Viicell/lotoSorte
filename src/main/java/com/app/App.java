@@ -8,14 +8,17 @@ import java.util.List;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.Pagination;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
+import javafx.scene.control.Slider;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
@@ -23,8 +26,11 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -41,6 +47,13 @@ public class App extends Application {
     public static final String SRC_FOLDER_PATH_RESULTS = SRC_FOLDER_PATH + "Results" + File.separator;
     public static final String SRC_FOLDER_PATH_CONFIGS = SRC_FOLDER_PATH_GAMES + "Configs" + File.separator;
 
+    private ChoiceBox<String> choiceBox;
+    private ChoiceBox<String> numberAmount;
+    private VBox rightPane;
+    private GridPane trevos;
+    private GridPane monthsButtons;
+    @SuppressWarnings("unused")
+    private GameMode currentGameMode;
     public static GameMode[] gameModes = {
         new GameMode("+Milionária", 50, 6, 12, true, false, 6.00f),
         new GameMode("Mega-Sena", 60, 6, 20, true, false, 5.00f),
@@ -132,69 +145,332 @@ public class App extends Application {
         return sideMenu;
     }
 
+    private void addConfigLabel(VBox gameContent, String labelName, String labelValue) {
+        HBox labelContainer = new HBox(5);
+        Button label = new Button(labelName);
+        label.setPrefWidth(200);
+        label.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+        Button labelVal = new Button(labelValue);
+        labelVal.setPrefWidth(200);
+        labelVal.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+        labelContainer.getChildren().addAll(label, labelVal);
+        gameContent.getChildren().add(labelContainer);
+    }
+
+    private void addConfigLabel(VBox gameContent, String labelName, String labelValue, String labelValue2, boolean type, Integer i) {
+        HBox labelContainer = new HBox(5);
+        Button label = new Button(labelName);
+        label.setPrefWidth(200);
+        label.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+        Button labelVal = new Button(labelValue);
+        labelVal.setPrefWidth(100);
+        labelVal.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+        Button labelVal2 = new Button(labelValue2);
+        labelVal2.setPrefWidth(100);
+        labelVal2.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+        Button isComposite = new Button("Composto");
+        isComposite.setPrefWidth(100);
+        isComposite.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+        Button isPrime = new Button("Primo");
+        isPrime.setPrefWidth(100);
+        isPrime.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+        Button none = new Button("Nenhum");
+        none.setPrefWidth(100);
+        none.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+        labelContainer.getChildren().addAll(label, labelVal, labelVal2);
+        if (type) {
+            if (Game.Data.isComposite(i)) {
+                labelContainer.getChildren().add(isComposite);
+                label.setPrefWidth(100);
+            } else if (Game.Data.isPrime(i)) {
+                labelContainer.getChildren().add(isPrime);
+                label.setPrefWidth(100);
+            } else if (i == 0 || i == 1) {
+                labelContainer.getChildren().add(none);
+                label.setPrefWidth(100);
+            }
+        }
+        gameContent.getChildren().add(labelContainer);
+    }
+
     private void loadGameTab(File gameFile) {
         try {
             Game loadedGame = Game.loadFromFile(gameFile.getAbsolutePath());
             Tab gameTab = new Tab(gameFile.getName().replace(".json", ""));
             gameTab.setClosable(true);
+
+            // Main container
             GridPane gameTabPane = new GridPane();
+            gameTabPane.setPrefWidth(width);
             gameTabPane.setPrefHeight(height);
+            gameTabPane.setMaxHeight(Double.MAX_VALUE);
+
+            // Left side - game content with pagination
             VBox gameContent = new VBox(5);
-            gameContent.setPadding(new javafx.geometry.Insets(5));
-            gameContent.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
-            gameContent.setPrefWidth(400);
+            gameContent.setPrefWidth(width * 0.7);
             gameContent.setPrefHeight(height);
-            for (int i = 0; i < loadedGame.games.length; i++) {
-                GridPane buttonsGrid = new GridPane();
-                Label gameNumber = new Label("Game: " + (i + 1));
-                String[] game = loadedGame.games[i];
-                List<Button> buttons = numbersButtons(game);
-                addGame(buttonsGrid, buttons);
-                gameContent.getChildren().addAll(gameNumber, buttonsGrid);
-                if (loadedGame.gameMode.name.equals("+Milionária")) {
-                    String[] trevos = loadedGame.maisMilionaria.trevos[i];
-                    List<Button> trevosButtons = numbersButtons(trevos);
-                    GridPane trevosGrid = new GridPane();
-                    Label trevosLabel = new Label("Trevos:");
-                    addGame(trevosGrid, trevosButtons);
-                    gameContent.getChildren().addAll(trevosLabel, trevosGrid);
+            gameContent.setMaxHeight(Double.MAX_VALUE);
+            gameContent.setPadding(new javafx.geometry.Insets(10));
+            gameContent.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+
+            // Create pagination
+            int itemsPerPage = 10; // Adjust this value as needed
+            int pageCount = (int) Math.ceil((double) loadedGame.games.length / itemsPerPage);
+            Pagination pagination = new Pagination(pageCount);
+            pagination.setPageFactory(pageIndex -> {
+                VBox page = new VBox(10);
+                int start = pageIndex * itemsPerPage;
+                int end = Math.min(start + itemsPerPage, loadedGame.games.length);
+
+                for (int i = start; i < end; i++) {
+                    GridPane buttonsGrid = new GridPane();
+
+                    // Create HBox for game header
+                    HBox gameHeader = new HBox(5);
+                    Button gameNumber = new Button("Jogo: " + (i + 1));
+                    gameNumber.setPrefWidth(width);
+                    gameNumber.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+
+                    Button prontoButton = new Button("Pronto");
+                    prontoButton.setMinWidth(80);
+                    prontoButton.setStyle("-fx-background-color: #90EE90;");
+
+                    gameHeader.getChildren().addAll(gameNumber, prontoButton);
+
+                    String[] game = loadedGame.games[i];
+                    List<Button> buttons = numbersButtons(game);
+                    addGame(buttonsGrid, buttons);
+
+                    // Add Pronto button functionality
+                    final List<Button> gameButtons = buttons;
+                    prontoButton.setOnAction(e -> {
+                        boolean isReady = prontoButton.getText().equals("Pronto");
+                        if (isReady) {
+                            prontoButton.setText("Editar");
+                            prontoButton.setStyle("-fx-background-color: #FFB6C1;");
+                            gameButtons.forEach(button -> button.setDisable(true));
+
+                            if (loadedGame.gameMode.name.equals("+Milionária")) {
+                                GridPane trevosGrid = (GridPane) page.getChildren().get(
+                                        page.getChildren().indexOf(buttonsGrid) + 2
+                                );
+                                trevosGrid.getChildren().forEach(node -> {
+                                    if (node instanceof Button) {
+                                        node.setDisable(true);
+                                    }
+                                });
+                            }
+
+                            if (loadedGame.gameMode.name.equals("Dia de Sorte")) {
+                                GridPane monthGrid = (GridPane) page.getChildren().get(
+                                        page.getChildren().indexOf(buttonsGrid) + 2
+                                );
+                                monthGrid.getChildren().forEach(node -> {
+                                    if (node instanceof Button) {
+                                        node.setDisable(true);
+                                    }
+                                });
+                            }
+                        } else {
+                            prontoButton.setText("Pronto");
+                            prontoButton.setStyle("-fx-background-color: #90EE90;");
+                            gameButtons.forEach(button -> {
+                                if (!button.getText().startsWith("Coluna")) {
+                                    button.setDisable(false);
+                                }
+                            });
+
+                            if (loadedGame.gameMode.name.equals("+Milionária")) {
+                                GridPane trevosGrid = (GridPane) page.getChildren().get(
+                                        page.getChildren().indexOf(buttonsGrid) + 2
+                                );
+                                trevosGrid.getChildren().forEach(node -> {
+                                    if (node instanceof Button) {
+                                        node.setDisable(false);
+                                    }
+                                });
+                            }
+
+                            if (loadedGame.gameMode.name.equals("Dia de Sorte")) {
+                                GridPane monthGrid = (GridPane) page.getChildren().get(
+                                        page.getChildren().indexOf(buttonsGrid) + 2
+                                );
+                                monthGrid.getChildren().forEach(node -> {
+                                    if (node instanceof Button) {
+                                        node.setDisable(false);
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                    page.getChildren().addAll(gameHeader, buttonsGrid);
+
+                    // Add special elements (trevos, months) if needed
+                    if (loadedGame.gameMode.name.equals("+Milionária")) {
+                        String[] trevos1 = loadedGame.maisMilionaria.trevos[i];
+                        List<Button> trevosButtons = numbersButtons(trevos1);
+                        GridPane trevosGrid = new GridPane();
+                        Button trevosButton = new Button("Trevos");
+                        trevosButton.setPrefWidth(width);
+                        trevosButton.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+                        addGame(trevosGrid, trevosButtons);
+                        page.getChildren().addAll(trevosButton, trevosGrid);
+                    }
+
+                    if (loadedGame.gameMode.name.equals("Dia de Sorte")) {
+                        String month = loadedGame.diaDeSorte.month[i];
+                        Button monthButtons = new Button(month);
+                        GridPane monthGrid = new GridPane();
+                        Button monthButton = new Button("Mês:");
+                        monthButton.setPrefWidth(width);
+                        monthButton.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+                        monthGrid.add(monthButtons, 0, 0);
+                        page.getChildren().addAll(monthButton, monthGrid);
+                    }
+
+                    if (i < end) {
+                        Separator separator = new Separator();
+                        separator.setPrefWidth(page.getPrefWidth());
+                        page.getChildren().add(separator);
+                    }
+
                 }
-                if (loadedGame.gameMode.name.equals("Dia de Sorte")) {
-                    String month = loadedGame.diaDeSorte.month[i];
-                    Button monthButtons = new Button(month);
-                    GridPane monthGrid = new GridPane();
-                    Label monthLabel = new Label("Mês:");
-                    monthGrid.add(monthButtons, 0, 0);
-                    gameContent.getChildren().addAll(monthLabel, monthGrid);
+                return page;
+            });
+
+            gameContent.getChildren().add(pagination);
+
+            // Right side TabPane
+            TabPane rightTabPane = new TabPane();
+            rightTabPane.setPrefWidth(width * 0.3);
+            rightTabPane.setPrefHeight(height);
+            rightTabPane.setMaxHeight(Double.MAX_VALUE);
+
+            // Tab 1 - Dados do Jogo
+            Tab dadosTab = new Tab("Dados do Jogo");
+            dadosTab.setClosable(false);
+            VBox dadosContent = new VBox(5);
+            dadosContent.setPadding(new javafx.geometry.Insets(10));
+            dadosContent.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+
+            Button GameModeLabel = new Button(loadedGame.gameMode.name);
+            GameModeLabel.setPrefWidth(width);
+            GameModeLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+            dadosContent.getChildren().add(GameModeLabel);
+            addConfigLabel(dadosContent, "Number Amount:", String.valueOf(loadedGame.numbers));
+            addConfigLabel(dadosContent, "Game Amount:", String.valueOf(loadedGame.amount));
+            addConfigLabel(dadosContent, "Game Price:", String.valueOf(loadedGame.totalCost));
+            dadosContent.getChildren().add(new Separator());
+            Button DataLabel = new Button("Data");
+            DataLabel.setPrefWidth(width);
+            DataLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+            dadosContent.getChildren().add(DataLabel);
+
+            addConfigLabel(dadosContent, "Números Par", String.valueOf(loadedGame.data.totalEvenNumbers),
+                    String.format("%.0f%%", loadedGame.data.evenNumberPercentage), false, null);
+            for (int i = 0; i < loadedGame.data.evenNumbers.length; i++) {
+                addConfigLabel(dadosContent, loadedGame.data.evenNumbers[i].evenNumber,
+                        String.valueOf(loadedGame.data.evenNumbers[i].evenAmount),
+                        String.format("%.0f%%", (loadedGame.data.evenNumbers[i].evenAmount * 100.0f) / loadedGame.data.totalNumbers), true, i);
+
+            }
+            addConfigLabel(dadosContent, "Números Ímpar", String.valueOf(loadedGame.data.totalOddNumbers),
+                    String.format("%.0f%%", loadedGame.data.oddNumberPercentage), false, null);
+            for (int i = 0; i < loadedGame.data.oddNumbers.length; i++) {
+                addConfigLabel(dadosContent, loadedGame.data.oddNumbers[i].oddNumber,
+                        String.valueOf(loadedGame.data.oddNumbers[i].oddAmount),
+                        String.format("%.0f%%", (loadedGame.data.oddNumbers[i].oddAmount * 100.0f) / loadedGame.data.totalNumbers), true, i);
+            }
+
+            ScrollPane dadosScroll = new ScrollPane(dadosContent);
+            dadosScroll.setFitToWidth(true);
+            dadosScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+            dadosScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+            dadosTab.setContent(dadosScroll);
+
+            // Tab 2 - Configuração Usada
+            Tab configTab = new Tab("Configuração Usada");
+            configTab.setClosable(false);
+            VBox configContent = new VBox(5);
+            configContent.setPadding(new javafx.geometry.Insets(10));
+            configContent.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+
+            Button numbersConfigButton = new Button("Probabilidades dos Números:");
+            numbersConfigButton.setPrefWidth(width);
+            numbersConfigButton.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+            configContent.getChildren().add(numbersConfigButton);
+
+            for (GameMode.Numbers number : loadedGame.gameMode.numbers) {
+
+                addConfigLabel(configContent, "Número " + number.number + ":",
+                        String.format("%.0f%%", number.probability * 100));
+            }
+
+            if (loadedGame.gameMode.name.equals("+Milionária")) {
+                Button trevosConfigButton = new Button("Probabilidades dos Trevos:");
+                trevosConfigButton.setPrefWidth(width);
+                trevosConfigButton.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+                configContent.getChildren().add(trevosConfigButton);
+
+                for (GameMode.MaisMilionaria.Trevo trevo : loadedGame.gameMode.maisMilionaria.trevos) {
+                    addConfigLabel(configContent, "Trevo " + trevo.trevo + ":",
+                            String.format("%.0f%%", trevo.probability * 100));
                 }
-                // add a vertical line
-                if (i < loadedGame.games.length - 1) {
-                    Separator separator = new Separator();
-                    separator.setPrefWidth(gameContent.getPrefWidth());
-                    gameContent.getChildren().add(separator);
+            } else if (loadedGame.gameMode.name.equals("Dia de Sorte")) {
+                Button monthsConfigButton = new Button("Probabilidades dos Meses:");
+                monthsConfigButton.setPrefWidth(width);
+                monthsConfigButton.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+                configContent.getChildren().add(monthsConfigButton);
+
+                for (GameMode.DiaDeSorte.Months month : loadedGame.gameMode.diaDeSorte.months) {
+                    addConfigLabel(configContent, "Mês " + month.month + ":",
+                            String.format("%.0f%%", month.probability * 100));
                 }
             }
-            VBox gameData = new VBox(5);
-            gameData.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
-            gameData.setPrefWidth(300);
-            gameData.setPrefHeight(height);
-            gameData.setPadding(new javafx.geometry.Insets(5));
 
-            Label gameModeLabel = new Label("Game Mode: " + loadedGame.gameMode.name);
-            Label numberAmountLabel = new Label("Number Amount: " + loadedGame.numbers);
-            Label gameAmountLabel = new Label("Game Amount: " + loadedGame.amount);
+            ScrollPane configScroll = new ScrollPane(configContent);
+            configScroll.setFitToWidth(true);
+            configTab.setContent(configScroll);
 
-            gameData.getChildren().addAll(gameModeLabel, numberAmountLabel, gameAmountLabel);
+            rightTabPane.getTabs().addAll(dadosTab, configTab);
 
-            // Add more details about the loaded game as needed
+            // Configure ScrollPanes
             ScrollPane scrollPane = new ScrollPane(gameContent);
-            ScrollPane scrollPane2 = new ScrollPane(gameData);
+            scrollPane.setFitToWidth(true);
+            scrollPane.setFitToHeight(true);
+            scrollPane.setPrefViewportHeight(height);
+            scrollPane.setMaxHeight(Double.MAX_VALUE);
+            scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+            scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+            ScrollPane scrollPane2 = new ScrollPane(rightTabPane);
+            scrollPane2.setFitToWidth(true);
+            scrollPane2.setFitToHeight(true);
+            scrollPane2.setPrefViewportHeight(height);
+            scrollPane2.setMaxHeight(Double.MAX_VALUE);
+            scrollPane2.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+            scrollPane2.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+            // Set column constraints
             gameTabPane.add(scrollPane, 0, 0);
             gameTabPane.add(scrollPane2, 1, 0);
-            gameTab.setContent(gameTabPane);
 
+            ColumnConstraints col1 = new ColumnConstraints();
+            col1.setPercentWidth(60);
+            ColumnConstraints col2 = new ColumnConstraints();
+            col2.setPercentWidth(40);
+            gameTabPane.getColumnConstraints().addAll(col1, col2);
+
+            // Set row constraints for vertical growth
+            RowConstraints row = new RowConstraints();
+            row.setVgrow(Priority.ALWAYS);
+            gameTabPane.getRowConstraints().add(row);
+
+            gameTab.setContent(gameTabPane);
             mainTabPane.getTabs().add(gameTab);
             mainTabPane.getSelectionModel().select(gameTab);
+
         } catch (Exception e) {
             System.err.println("Error loading game: " + e.getMessage());
         }
@@ -209,15 +485,26 @@ public class App extends Application {
             if (gameFiles != null) {
                 for (File gameFile : gameFiles) {
                     VBox gameRow = new VBox(5);
-                    //remove .Json from name
+                    // Remover a extensão .json do nome
                     Button gameButton = new Button(gameFile.getName().replace(".json", ""));
                     gameButton.setPrefWidth(width / 6 - 26);
                     gameButton.setOnAction(e -> loadGameTab(gameFile));
 
+                    // Botão Deletar existente
                     Button deleteButton = new Button("Deletar");
                     deleteButton.setOnAction(e -> deleteGame(gameFile, buttonsContainer));
 
-                    gameRow.getChildren().addAll(gameButton, deleteButton);
+                    // Novo botão Copiar
+                    Button copyButton = new Button("Copiar Configuração");
+                    copyButton.setOnAction(e -> {
+                        copyGameConfiguration(gameFile);
+                    });
+
+                    // Adicionar os botões ao layout
+                    HBox buttonBox = new HBox(5);
+                    buttonBox.getChildren().addAll(deleteButton, copyButton);
+
+                    gameRow.getChildren().addAll(gameButton, buttonBox);
                     buttonsContainer.getChildren().add(gameRow);
                 }
             }
@@ -269,25 +556,28 @@ public class App extends Application {
     }
 
     private void updateGameNumbers(ChoiceBox<String> choiceBox) {
-        // Clear existing buttons
-        gameNumbers.getChildren().clear();
+        gameNumbers.getChildren().clear();  // Clear existing buttons first
 
         int selectedIndex = choiceBox.getSelectionModel().getSelectedIndex();
         List<Button> buttons = numbersButtons(gameModes[selectedIndex]);
 
-        int columns = 10; // Define the number of columns you want
-
+        int columns = 10;
         for (int i = 0; i < buttons.size(); i++) {
             int row = i / columns;
             int col = i % columns;
-            gameNumbers.add(buttons.get(i), col, row);
+            Button button = buttons.get(i);
+
+            // Assign an ID to the button
+            button.setId("numberButton" + i);
+
+            gameNumbers.add(button, col, row);
         }
         gameNumbers.setHgap(5);
         gameNumbers.setVgap(5);
     }
 
     private ChoiceBox<String> numberAmount(GameMode gameMode) {
-        ChoiceBox<String> numberAmount = new ChoiceBox<>();
+        numberAmount = new ChoiceBox<>();
         for (int i = gameMode.minSelections; i <= gameMode.maxSelections; i++) {
             numberAmount.getItems().add(i + " Números");
         }
@@ -391,18 +681,59 @@ public class App extends Application {
         gridPane.setPrefWidth(width);
         gridPane.setPrefHeight(height);
 
-        VBox leftPane = new VBox();
-        leftPane.setMinWidth(345);
-        leftPane.setMinHeight(345);
+        // Left side - game content
+        VBox leftPane = new VBox(5);
+        leftPane.setPrefWidth(width * 0.6);
+        leftPane.setPrefHeight(height);
+        leftPane.setMaxHeight(Double.MAX_VALUE);
+        leftPane.setPadding(new javafx.geometry.Insets(10));
         leftPane.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
-        gridPane.add(leftPane, 0, 0);
 
+        // Right side - game mode configuration (Probability Editor)
+        rightPane = new VBox(5); // Atualizado para variável de instância
+        rightPane.setPrefWidth(width * 0.4);
+        rightPane.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+
+        // Configure ScrollPanes for both panes
+        ScrollPane leftScroll = new ScrollPane(leftPane);
+        leftScroll.setFitToWidth(true);
+        leftScroll.setFitToHeight(true);
+        leftScroll.setPrefViewportHeight(height);
+        leftScroll.setMaxHeight(Double.MAX_VALUE);
+        leftScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        leftScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        ScrollPane rightScroll = new ScrollPane(rightPane);
+        rightScroll.setFitToWidth(true);
+        rightScroll.setFitToHeight(true);
+        rightScroll.setPrefViewportHeight(height);
+        rightScroll.setMaxHeight(Double.MAX_VALUE);
+        rightScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        rightScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        // Add the scroll panes to the grid
+        gridPane.add(leftScroll, 0, 0);
+        gridPane.add(rightScroll, 1, 0);
+
+        // Set column constraints
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setPercentWidth(50);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setPercentWidth(50);
+        gridPane.getColumnConstraints().addAll(col1, col2);
+
+        // Set row constraints for vertical growth
+        RowConstraints row = new RowConstraints();
+        row.setVgrow(Priority.ALWAYS);
+        gridPane.getRowConstraints().add(row);
+
+        // Build the content for leftPane
         leftPane.setPadding(new javafx.geometry.Insets(5, 5, 5, 5));
         leftPane.setSpacing(5);
 
         // Create the game mode choice box
-        ChoiceBox<String> choiceBox = gameModeChoice();
-        ChoiceBox<String> numberAmount = numberAmount(gameModes[choiceBox.getSelectionModel().getSelectedIndex()]);
+        choiceBox = gameModeChoice(); // Atualizado para variável de instância
+        numberAmount = numberAmount(gameModes[choiceBox.getSelectionModel().getSelectedIndex()]);
 
         HBox gameModeBox = new HBox();
         gameModeBox.setSpacing(5);
@@ -413,7 +744,7 @@ public class App extends Application {
         updateGameNumbers(choiceBox);
 
         // Initialize trevos
-        GridPane trevos = new GridPane();
+        trevos = new GridPane();
         updateTrevos(choiceBox, trevos);
 
         ChoiceBox<String> trevoAmount = trevoAmount(choiceBox);
@@ -433,8 +764,7 @@ public class App extends Application {
         numberAmountField.setPrefWidth(165);
         numberAmountField.setPromptText("Digite o número de Jogos:");
         HBox buttonBox = new HBox();
-
-        GridPane monthsButtons = new GridPane();
+        monthsButtons = new GridPane();
         updateMonths(choiceBox, monthsButtons);
         Label monthsLabel = new Label("Editar Meses:");
 
@@ -502,8 +832,9 @@ public class App extends Application {
                         // If file exists, delete it
                         file.delete();
                     }
-                    // Save the game to a file
+
                     game.saveToFile(filePath);
+                    System.out.println("\nGame saved successfully to: " + filePath);
                     Tab jogosTab = mainTabPane.getTabs().stream()
                             .filter(tab -> tab.getText().equals("Jogos"))
                             .findFirst()
@@ -515,6 +846,7 @@ public class App extends Application {
                         VBox buttonsContainer = (VBox) scrollPane.getContent();
                         refreshGameList(buttonsContainer);
                     }
+
                     // ... (add any additional logic here, such as showing a success message)
                 } catch (Exception e) {
                     System.err.println("An error occurred: " + e.getMessage());
@@ -565,6 +897,19 @@ public class App extends Application {
             updateTrevos(choiceBox, trevos);
         });
 
+        // Initialize the probability editor for the default game mode
+        GameMode selectedGameMode = gameModes[0]; // Default to first game mode
+        VBox probabilityEditor = createProbabilityEditor(selectedGameMode);
+        rightPane.getChildren().add(probabilityEditor);
+
+        // Update the probability editor when the game mode changes
+        choiceBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            GameMode newSelectedGameMode = gameModes[newValue.intValue()];
+            VBox newProbabilityEditor = createProbabilityEditor(newSelectedGameMode);
+            rightPane.getChildren().clear();
+            rightPane.getChildren().add(newProbabilityEditor);
+        });
+
         Label label1 = new Label("Escolha o Jogo:");
         label1.setFont(new Font(14));
         Label label2 = new Label("Editar Numeros:");
@@ -582,6 +927,256 @@ public class App extends Application {
         buttonBox.getChildren().addAll(numberAmountField, generateButton);
         leftPane.getChildren().add(buttonBox);
         return gridPane;
+    }
+
+    private void copyGameConfiguration(File gameFile) {
+        try {
+            // Carregar o jogo do arquivo
+            Game loadedGame = Game.loadFromFile(gameFile.getAbsolutePath());
+            GameMode loadedGameMode = loadedGame.gameMode;
+
+            // Atualizar o gameMode atual
+            currentGameMode = loadedGameMode;
+
+            // Atualizar a interface na aba "Gerar Jogo"
+            Platform.runLater(() -> {
+                // Selecionar a aba "Gerar Jogo"
+                Tab gerarJogoTab = mainTabPane.getTabs().stream()
+                        .filter(tab -> tab.getText().equals("Gerar Jogo"))
+                        .findFirst()
+                        .orElse(null);
+
+                // Se a aba não estiver aberta, abri-la
+                if (gerarJogoTab == null) {
+                    openTab("Gerar Jogo");
+                    gerarJogoTab = mainTabPane.getTabs().stream()
+                            .filter(tab -> tab.getText().equals("Gerar Jogo"))
+                            .findFirst()
+                            .orElse(null);
+                }
+
+                // Selecionar a aba "Gerar Jogo"
+                if (gerarJogoTab != null) {
+                    mainTabPane.getSelectionModel().select(gerarJogoTab);
+                }
+
+                // Atualizar os componentes da interface com a configuração carregada
+                updateGenerateGameTabWithGameMode(loadedGameMode, loadedGame);
+            });
+
+        } catch (Exception e) {
+            System.err.println("Erro ao copiar a configuração do jogo: " + e.getMessage());
+        }
+    }
+
+    private void updateGenerateGameTabWithGameMode(GameMode gameMode, Game loadedGame) {
+        // Atualizar o ChoiceBox de modos de jogo
+        choiceBox.setValue(gameMode.name);
+
+        // Atualizar o número de números selecionados
+        numberAmount.getItems().clear();
+        for (int i = gameMode.minSelections; i <= gameMode.maxSelections; i++) {
+            numberAmount.getItems().add(i + " Números");
+        }
+        numberAmount.setValue(loadedGame.numbers + " Números");
+
+        // Atualizar as probabilidades dos números
+        for (int i = 0; i < gameMode.numbers.length; i++) {
+            gameMode.numbers[i].probability = loadedGame.gameMode.numbers[i].probability;
+        }
+
+        // Atualizar a interface da seção de probabilidade
+        rightPane.getChildren().clear();
+        VBox probabilityEditor = createProbabilityEditor(gameMode);
+        rightPane.getChildren().add(probabilityEditor);
+
+        // Atualizar quaisquer outros componentes necessários
+        updateGameNumbers(choiceBox);
+        updateTrevos(choiceBox, trevos);
+        updateMonths(choiceBox, monthsButtons);
+    }
+
+    private VBox createProbabilityEditor(GameMode gameMode) {
+        VBox probabilityEditor = new VBox(15);
+        probabilityEditor.setPadding(new javafx.geometry.Insets(5));
+        probabilityEditor.setBackground(new Background(new BackgroundFill(Color.LIGHTGRAY, null, null)));
+
+        // Numbers section
+        Label numbersLabel = new Label("Editar probabilidade dos números (%)");
+        numbersLabel.setFont(new Font(16));
+        probabilityEditor.getChildren().add(numbersLabel);
+
+        VBox numbersContainer = createNumbersProbabilitySection(gameMode);
+        probabilityEditor.getChildren().add(numbersContainer);
+
+        // Trevos section (for Mais Milionária)
+        if (gameMode.name.equals("+Milionária")) {
+            Label trevosLabel = new Label("Editar probabilidade dos trevos (%)");
+            trevosLabel.setFont(new Font(16));
+            probabilityEditor.getChildren().add(trevosLabel);
+
+            VBox trevosContainer = createTrevosProbabilitySection(gameMode);
+            probabilityEditor.getChildren().add(trevosContainer);
+        }
+
+        // Months section (for Dia de Sorte)
+        if (gameMode.name.equals("Dia de Sorte")) {
+            Label monthsLabel = new Label("Editar probabilidade dos meses (%)");
+            monthsLabel.setFont(new Font(16));
+            probabilityEditor.getChildren().add(monthsLabel);
+
+            VBox monthsContainer = createMonthsProbabilitySection(gameMode);
+            probabilityEditor.getChildren().add(monthsContainer);
+        }
+
+        ScrollPane scrollPane = new ScrollPane(probabilityEditor);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        VBox mainContainer = new VBox(scrollPane);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
+        return mainContainer;
+    }
+
+    private VBox createNumbersProbabilitySection(GameMode gameMode) {
+        VBox container = new VBox(10);
+        container.setPadding(new javafx.geometry.Insets(5));
+
+        for (int i = 0; i < gameMode.numbers.length; i++) {
+            Button numberButton = new Button(gameMode.numbers[i].number);
+            numberButton.setDisable(true);
+            numberButton.setPrefWidth(60);
+
+            // Set initial style based on probability
+            updateButtonStyle(numberButton, gameMode.numbers[i].probability);
+
+            Slider probabilitySlider = new Slider(0, 100, gameMode.numbers[i].probability * 100);
+            probabilitySlider.setPrefWidth(200);
+            probabilitySlider.setMajorTickUnit(10);
+            probabilitySlider.setMinorTickCount(1);
+            probabilitySlider.setBlockIncrement(1);
+            probabilitySlider.setShowTickMarks(true);
+            probabilitySlider.setShowTickLabels(true);
+
+            Label probabilityLabel = new Label(String.format("%.0f%%", gameMode.numbers[i].probability * 100));
+            probabilityLabel.setPrefWidth(50);
+
+            int index = i;
+            probabilitySlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+                float newProbability = newValue.floatValue() / 100.0f;
+                gameMode.updateProbabilities("numbers", index, newProbability);
+                probabilityLabel.setText(String.format("%.0f%%", newValue.floatValue()));
+
+                // Update button style based on new probability
+                updateButtonStyle(numberButton, newProbability);
+
+                System.out.println(String.format("Number %s probability changed from %.2f%% to %.2f%%",
+                        numberButton.getText(), oldValue.floatValue(), newValue.floatValue()));
+            });
+
+            HBox hbox = new HBox(10);
+            hbox.setAlignment(Pos.CENTER_LEFT);
+            hbox.getChildren().addAll(numberButton, probabilitySlider, probabilityLabel);
+            container.getChildren().add(hbox);
+        }
+        return container;
+    }
+
+    private VBox createTrevosProbabilitySection(GameMode gameMode) {
+        VBox container = new VBox(10);
+        container.setPadding(new javafx.geometry.Insets(5));
+
+        for (int i = 0; i < gameMode.maisMilionaria.trevos.length; i++) {
+            Button trevoButton = new Button(gameMode.maisMilionaria.trevos[i].trevo);
+            trevoButton.setDisable(true);
+            trevoButton.setPrefWidth(60);
+
+            // Set initial style based on probability
+            updateButtonStyle(trevoButton, gameMode.maisMilionaria.trevos[i].probability);
+
+            Slider probabilitySlider = new Slider(0, 100, gameMode.maisMilionaria.trevos[i].probability * 100);
+            probabilitySlider.setPrefWidth(200);
+            probabilitySlider.setMajorTickUnit(10);
+            probabilitySlider.setMinorTickCount(1);
+            probabilitySlider.setBlockIncrement(1);
+            probabilitySlider.setShowTickMarks(true);
+            probabilitySlider.setShowTickLabels(true);
+
+            Label probabilityLabel = new Label(String.format("%.0f%%", gameMode.maisMilionaria.trevos[i].probability * 100));
+            probabilityLabel.setPrefWidth(50);
+
+            int index = i;
+            probabilitySlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+                float newProbability = newValue.floatValue() / 100.0f;
+                gameMode.updateProbabilities("trevos", index, newProbability);
+                probabilityLabel.setText(String.format("%.0f%%", newValue.floatValue()));
+
+                // Update button style based on new probability
+                updateButtonStyle(trevoButton, newProbability);
+
+                System.out.println(String.format("Trevo %s probability changed from %.2f%% to %.2f%%",
+                        trevoButton.getText(), oldValue.floatValue(), newValue.floatValue()));
+            });
+
+            HBox hbox = new HBox(10);
+            hbox.setAlignment(Pos.CENTER_LEFT);
+            hbox.getChildren().addAll(trevoButton, probabilitySlider, probabilityLabel);
+            container.getChildren().add(hbox);
+        }
+        return container;
+    }
+
+    private VBox createMonthsProbabilitySection(GameMode gameMode) {
+        VBox container = new VBox(10);
+        container.setPadding(new javafx.geometry.Insets(5));
+
+        for (int i = 0; i < gameMode.diaDeSorte.months.length; i++) {
+            Button monthButton = new Button(gameMode.diaDeSorte.months[i].month);
+            monthButton.setDisable(true);
+            monthButton.setPrefWidth(100);
+
+            // Set initial style based on probability
+            updateButtonStyle(monthButton, gameMode.diaDeSorte.months[i].probability);
+
+            Slider probabilitySlider = new Slider(0, 100, gameMode.diaDeSorte.months[i].probability * 100);
+            probabilitySlider.setPrefWidth(200);
+            probabilitySlider.setMajorTickUnit(10);
+            probabilitySlider.setMinorTickCount(1);
+            probabilitySlider.setBlockIncrement(1);
+            probabilitySlider.setShowTickMarks(true);
+            probabilitySlider.setShowTickLabels(true);
+
+            Label probabilityLabel = new Label(String.format("%.0f%%", gameMode.diaDeSorte.months[i].probability * 100));
+            probabilityLabel.setPrefWidth(50);
+
+            int index = i;
+            probabilitySlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+                float newProbability = newValue.floatValue() / 100.0f;
+                gameMode.updateProbabilities("months", index, newProbability);
+                probabilityLabel.setText(String.format("%.0f%%", newValue.floatValue()));
+
+                // Update button style based on new probability
+                updateButtonStyle(monthButton, newProbability);
+
+                System.out.println(String.format("Month %s probability changed from %.2f%% to %.2f%%",
+                        monthButton.getText(), oldValue.floatValue(), newValue.floatValue()));
+            });
+
+            HBox hbox = new HBox(10);
+            hbox.setAlignment(Pos.CENTER_LEFT);
+            hbox.getChildren().addAll(monthButton, probabilitySlider, probabilityLabel);
+            container.getChildren().add(hbox);
+        }
+        return container;
+    }
+
+    private void updateButtonStyle(Button button, float probability) {
+        if (probability != 1.0f) {
+            button.setStyle("-fx-background-color: #FFCCCC;");
+        } else {
+            button.setStyle("");
+        }
     }
 
     private void createDirectoryIfNotExists(String directoryPath) {
@@ -624,32 +1219,31 @@ public class App extends Application {
     private void addGame(GridPane gridPane, List<Button> buttons) {
         int currentCol = 0;
         int currentRow = 0;
-        int columns = 10; // Define o número de colunas desejado
+        int columns = 10; // Number of desired columns
 
-        for (int i = 0; i < buttons.size(); i++) {
-            Button button = buttons.get(i);
+        for (Button button : buttons) {
             if (button.getText().startsWith("Coluna")) {
-                // Se o botão é uma coluna, adiciona em uma nova linha
+                // If the button is a column header, start a new row
                 currentRow++;
                 currentCol = 0;
                 gridPane.add(button, currentCol, currentRow);
-                currentCol++;
+                // Span the column header across all columns if desired
+                // GridPane.setColumnSpan(button, columns);
+                currentRow++; // Move to the next row for the numbers
+                currentCol = 0;
             } else {
-                // Para botões numéricos, usa a lógica de grade
-                int row = currentRow;
-                int col = currentCol % columns;
-                gridPane.add(button, col, row);
+                gridPane.add(button, currentCol, currentRow);
                 currentCol++;
 
-                // Se atingir o número máximo de colunas, avança para a próxima linha
-                if (currentCol % columns == 0) {
-                    currentRow++;
+                // If we reach the end of a row, reset column and move to next row
+                if (currentCol >= columns) {
                     currentCol = 0;
+                    currentRow++;
                 }
             }
         }
 
-        // Configura o espaçamento e a visibilidade do GridPane
+        // Set spacing and visibility
         gridPane.setHgap(5);
         gridPane.setVgap(5);
         gridPane.setVisible(true);
@@ -676,6 +1270,14 @@ public class App extends Application {
         }
         gameModeChoice.setValue(gameModes[0].name);
         gameModeChoice.setPrefWidth(165);
+
+        // Atualizar currentGameMode quando o jogo é selecionado
+        currentGameMode = gameModes[0]; // Inicializa com o primeiro gameMode
+
+        gameModeChoice.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            currentGameMode = gameModes[newValue.intValue()];
+        });
+
         return gameModeChoice;
     }
 
@@ -698,14 +1300,15 @@ public class App extends Application {
         int currentNumber = 0;
         int col = 1;
         while (currentNumber < game.length) {
-            Button button = new Button(game[currentNumber]);
+            String buttonText = game[currentNumber];
+            Button button = new Button(buttonText);
             button.setId("button" + currentNumber);
-            if ("|".equals(game[currentNumber])) {
-                game[currentNumber] = "Coluna " + col;
+            if ("|".equals(buttonText)) {
+                buttonText = "Coluna " + col;
                 col++;
                 button.setDisable(true);
                 button.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
-                button.setText(game[currentNumber]);
+                button.setText(buttonText);
             }
 
             buttonList.add(button);
@@ -727,7 +1330,7 @@ public class App extends Application {
         window.setTitle("LotoSorte");
         window.getIcons().add(icon);
         window.setScene(scene);
-        window.setWidth(width / 1.5);
+        window.setWidth(width / 1.4);
         window.setHeight(height / 1.5);
         window.show();
     }

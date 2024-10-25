@@ -10,65 +10,77 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * Representa um modo de jogo com suas características específicas.
  */
+@JsonSerialize
 public class GameMode {
 
     /**
      * Nome do modo de jogo
      */
+    @JsonProperty
     public String name;
 
     /**
      * Quantidade de números jogáveis
      */
+    @JsonProperty
     public Integer playableNumbers;
 
     /**
      * Número mínimo de seleções permitidas
      */
+    @JsonProperty
     public Integer minSelections;
 
     /**
      * Número máximo de seleções permitidas
      */
+    @JsonProperty
     public Integer maxSelections;
 
     /**
      * Array de números disponíveis para o jogo
      */
+    @JsonProperty
     public Numbers[] numbers;
 
     /**
      * Indica se os números devem ser exibidos com casas decimais
      */
+    @JsonProperty
     public Boolean displayDecimal;
 
     /**
      * Indica se a contagem dos números deve começar do zero
      */
+    @JsonProperty
     public Boolean startAtZero;
 
+    @JsonProperty
     public float costPerGame;
 
     /**
      * Instância do jogo Mais Milionária
      */
+    @JsonProperty
     public MaisMilionaria maisMilionaria;
 
     /**
      * Instância do jogo Dia de Sorte
      */
+    @JsonProperty
     public DiaDeSorte diaDeSorte;
 
     /**
      * Instância do jogo Super Sete
      */
+    @JsonProperty
     public SuperSete superSete;
 
     /**
@@ -95,15 +107,54 @@ public class GameMode {
         this.displayDecimal = displayDecimal;
         this.startAtZero = startAtZero;
         this.numbers = getNumbers(this.playableNumbers, this.displayDecimal, this.startAtZero);
-        this.maisMilionaria = new MaisMilionaria();
-        this.diaDeSorte = new DiaDeSorte();
-        this.superSete = new SuperSete();
+        switch (this.name) {
+            case "+Milionária":
+                this.maisMilionaria = new MaisMilionaria();
+                break;
+            case "Dia de Sorte":
+                this.diaDeSorte = new DiaDeSorte();
+                break;
+            case "Super Sete":
+                this.superSete = new SuperSete();
+                break;
+            default:
+                break;
+        }
         this.costPerGame = costPerGame;
     }
 
+    public void updateProbabilities(String type, int index, float probability) {
+        switch (type) {
+            case "numbers":
+                this.numbers[index].probability = probability;
+                break;
+            case "trevos":
+                if (this.maisMilionaria != null) {
+                    this.maisMilionaria.trevos[index].probability = probability;
+                }
+                break;
+            case "months":
+                if (this.diaDeSorte != null) {
+                    this.diaDeSorte.months[index].probability = probability;
+                }
+                break;
+        }
+    }
+
+    /**
+     * Salva o objeto GameMode em um arquivo, preservando os valores das
+     * subclasses existentes.
+     *
+     * @param fileName Nome do arquivo onde os dados serão salvos.
+     * @throws Exception Se ocorrer um erro durante a leitura ou escrita do
+     * arquivo.
+     */
     public void saveToFile(String fileName) throws Exception {
+        // Move logging before the file save operation
         ObjectMapper mapper = new ObjectMapper();
-        mapper.writeValue(new File(fileName), this);
+        File file = new File(fileName);
+        mapper.writeValue(file, this);
+        System.out.println("File saved successfully!");
     }
 
     public static Game loadFromFile(String fileName) throws Exception {
@@ -163,7 +214,7 @@ public class GameMode {
      * probabilidades.
      */
     public final static Numbers[] getNumbers(Integer playableNumbers, Boolean displayDecimal, Boolean startAtZero) {
-        Numbers[] numerosGerados = new Numbers[playableNumbers + 1];
+        Numbers[] numerosGerados = new Numbers[playableNumbers]; // Correct the array size
         int deslocamento = startAtZero ? 0 : 1;
         for (int i = 0; i < playableNumbers; i++) {
             numerosGerados[i] = new Numbers();
@@ -200,7 +251,7 @@ public class GameMode {
     /**
      * Classe que representa o jogo Mais Milionária.
      */
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonSerialize
     public static class MaisMilionaria {
 
         /**
@@ -216,22 +267,19 @@ public class GameMode {
         /**
          * Array de objetos Trevo que representa os trevos disponíveis no jogo.
          */
-        @JsonProperty("trevo")
+        @JsonProperty
         public Trevo[] trevos;
 
         /**
          * Classe interna que representa um trevo individual no jogo.
          */
+        @JsonSerialize
         public static class Trevo {
 
-            /**
-             * Identificador do trevo.
-             */
+            @JsonProperty
             public String trevo;
 
-            /**
-             * Probabilidade associada ao trevo.
-             */
+            @JsonProperty
             public Float probability;
 
             public Trevo() {
@@ -239,11 +287,29 @@ public class GameMode {
         }
 
         /**
-         * Construtor da classe MaisMilhionaria. Inicializa o array de trevos
-         * chamando o método getTrevo().
+         * Construtor da classe MaisMilionaria. Inicializa o array de trevos
+         * chamando o método trevosFunc().
          */
         public MaisMilionaria() {
-            this.trevos = getTrevo();
+            this.trevos = trevosFunc();
+        }
+
+        /**
+         * Obtém o array de trevos.
+         *
+         * @return Um array de objetos Trevo.
+         */
+        public Trevo[] getTrevos() {
+            return trevos;
+        }
+
+        /**
+         * Define o array de trevos.
+         *
+         * @param trevos Um array de objetos Trevo.
+         */
+        public void setTrevos(Trevo[] trevos) {
+            this.trevos = trevos;
         }
 
         /**
@@ -253,19 +319,14 @@ public class GameMode {
          * @return Um array de objetos Trevo representando os trevos
          * disponíveis.
          */
-        public final Trevo[] getTrevo() {
-            // Cria um novo array de Trevo com tamanho igual a maxTrevos
-            Trevo[] trevo = new Trevo[maxTrevos];
-
-            // Itera sobre o array, criando e configurando cada objeto Trevo
+        public final Trevo[] trevosFunc() {
+            Trevo[] trevoArray = new Trevo[maxTrevos];
             for (int i = 0; i < maxTrevos; i++) {
-                trevo[i] = new Trevo();  // Cria um novo objeto Trevo
-                trevo[i].trevo = String.format("%01d", i + 1);  // Define o número do trevo (começando de 1)
-                trevo[i].probability = 1.0f;  // Define a probabilidade inicial como 1.0
+                trevoArray[i] = new Trevo();
+                trevoArray[i].trevo = String.format("%01d", i + 1);
+                trevoArray[i].probability = 1.0f;
             }
-
-            // Retorna o array de trevos gerado
-            return trevo;
+            return trevoArray;
         }
 
         /**
@@ -319,11 +380,13 @@ public class GameMode {
     /**
      * Classe que representa o jogo Dia de Sorte.
      */
+    @JsonSerialize
     public static class DiaDeSorte {
 
         /**
          * Array de objetos Months que armazena os meses do jogo.
          */
+        @JsonProperty
         public Months[] months;
 
         /**
@@ -334,11 +397,13 @@ public class GameMode {
             /**
              * Nome do mês.
              */
+            @JsonProperty
             public String month;
 
             /**
              * Probabilidade associada ao mês.
              */
+            @JsonProperty
             public Float probability;
 
             public Months() {
@@ -350,7 +415,15 @@ public class GameMode {
          * o método getMonths().
          */
         public DiaDeSorte() {
-            this.months = getMonths();
+            this.months = monthsfunc();
+        }
+
+        public Months[] getMonths() {
+            return months;
+        }
+
+        public void setMonths(Months[] months) {
+            this.months = months;
         }
 
         /**
@@ -359,7 +432,7 @@ public class GameMode {
          * @return Um array de objetos Months, cada um contendo o nome do mês e
          * sua probabilidade.
          */
-        public final Months[] getMonths() {
+        public final Months[] monthsfunc() {
             // Array com os nomes dos meses em português
             String[] monthNames = {
                 "Janeiro",
