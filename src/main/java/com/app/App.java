@@ -157,7 +157,7 @@ public class App extends Application {
         gameContent.getChildren().add(labelContainer);
     }
 
-    private void addConfigLabel(VBox gameContent, String labelName, String labelValue, String labelValue2, boolean type, Integer i) {
+    private void addConfigLabel(VBox gameContent, String labelName, String labelValue, String labelValue2, boolean type) {
         HBox labelContainer = new HBox(5);
         Button label = new Button(labelName);
         label.setPrefWidth(200);
@@ -178,14 +178,19 @@ public class App extends Application {
         none.setPrefWidth(100);
         none.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
         labelContainer.getChildren().addAll(label, labelVal, labelVal2);
+
         if (type) {
-            if (Game.Data.isComposite(i)) {
+            if (labelName.length() == 2 && labelName.charAt(0) == '0' && labelName.charAt(1) == '0') {
+                labelName = labelName.substring(1);
+            }
+            int number = Integer.parseInt(labelName);
+            if (Game.Data.isComposite(number)) {
                 labelContainer.getChildren().add(isComposite);
                 label.setPrefWidth(100);
-            } else if (Game.Data.isPrime(i)) {
+            } else if (Game.Data.isPrime(number)) {
                 labelContainer.getChildren().add(isPrime);
                 label.setPrefWidth(100);
-            } else if (i == 0 || i == 1) {
+            } else if (number == 0 || number == 1) {
                 labelContainer.getChildren().add(none);
                 label.setPrefWidth(100);
             }
@@ -217,6 +222,16 @@ public class App extends Application {
             int itemsPerPage = 10; // Adjust this value as needed
             int pageCount = (int) Math.ceil((double) loadedGame.games.length / itemsPerPage);
             Pagination pagination = new Pagination(pageCount);
+            Pagination topPagination = new Pagination(pageCount);
+            topPagination.setPageFactory(pagination.getPageFactory());
+            gameContent.getChildren().add(0, topPagination);
+            topPagination.currentPageIndexProperty().addListener((obs, oldIndex, newIndex) -> {
+                pagination.setCurrentPageIndex(newIndex.intValue());
+            });
+
+            pagination.currentPageIndexProperty().addListener((obs, oldIndex, newIndex) -> {
+                topPagination.setCurrentPageIndex(newIndex.intValue());
+            });
             pagination.setPageFactory(pageIndex -> {
                 VBox page = new VBox(10);
                 int start = pageIndex * itemsPerPage;
@@ -358,9 +373,9 @@ public class App extends Application {
             GameModeLabel.setPrefWidth(width);
             GameModeLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
             dadosContent.getChildren().add(GameModeLabel);
-            addConfigLabel(dadosContent, "Number Amount:", String.valueOf(loadedGame.numbers));
-            addConfigLabel(dadosContent, "Game Amount:", String.valueOf(loadedGame.amount));
-            addConfigLabel(dadosContent, "Game Price:", String.valueOf(loadedGame.totalCost));
+            addConfigLabel(dadosContent, "Seleções:", String.valueOf(loadedGame.numbers));
+            addConfigLabel(dadosContent, "Quantidade:", String.valueOf(loadedGame.amount));
+            addConfigLabel(dadosContent, "Custo:", String.valueOf(loadedGame.totalCost));
             dadosContent.getChildren().add(new Separator());
             Button DataLabel = new Button("Data");
             DataLabel.setPrefWidth(width);
@@ -368,19 +383,14 @@ public class App extends Application {
             dadosContent.getChildren().add(DataLabel);
 
             addConfigLabel(dadosContent, "Números Par", String.valueOf(loadedGame.data.totalEvenNumbers),
-                    String.format("%.0f%%", loadedGame.data.evenNumberPercentage), false, null);
-            for (int i = 0; i < loadedGame.data.evenNumbers.length; i++) {
-                addConfigLabel(dadosContent, loadedGame.data.evenNumbers[i].evenNumber,
-                        String.valueOf(loadedGame.data.evenNumbers[i].evenAmount),
-                        String.format("%.0f%%", (loadedGame.data.evenNumbers[i].evenAmount * 100.0f) / loadedGame.data.totalNumbers), true, i);
-
+                    String.format("%.2f%%", loadedGame.data.evenNumberPercentage), false);
+            for (Game.Data.EvenNumbers evenNumber : loadedGame.data.evenNumbers) {
+                addConfigLabel(dadosContent, evenNumber.evenNumber, String.valueOf(evenNumber.evenAmount), String.format("%.2f%%", (evenNumber.evenAmount * 100.0f) / loadedGame.data.totalNumbers), true);
             }
             addConfigLabel(dadosContent, "Números Ímpar", String.valueOf(loadedGame.data.totalOddNumbers),
-                    String.format("%.0f%%", loadedGame.data.oddNumberPercentage), false, null);
-            for (int i = 0; i < loadedGame.data.oddNumbers.length; i++) {
-                addConfigLabel(dadosContent, loadedGame.data.oddNumbers[i].oddNumber,
-                        String.valueOf(loadedGame.data.oddNumbers[i].oddAmount),
-                        String.format("%.0f%%", (loadedGame.data.oddNumbers[i].oddAmount * 100.0f) / loadedGame.data.totalNumbers), true, i);
+                    String.format("%.2f%%", loadedGame.data.oddNumberPercentage), false);
+            for (Game.Data.OddNumbers oddNumber : loadedGame.data.oddNumbers) {
+                addConfigLabel(dadosContent, oddNumber.oddNumber, String.valueOf(oddNumber.oddAmount), String.format("%.2f%%", (oddNumber.oddAmount * 100.0f) / loadedGame.data.totalNumbers), true);
             }
 
             ScrollPane dadosScroll = new ScrollPane(dadosContent);
@@ -1001,32 +1011,40 @@ public class App extends Application {
         probabilityEditor.setPadding(new javafx.geometry.Insets(5));
         probabilityEditor.setBackground(new Background(new BackgroundFill(Color.LIGHTGRAY, null, null)));
 
-        // Numbers section
-        Label numbersLabel = new Label("Editar probabilidade dos números (%)");
-        numbersLabel.setFont(new Font(16));
-        probabilityEditor.getChildren().add(numbersLabel);
+        if (gameMode.name.equals("Super Sete")) {
+            Label numbersLabel = new Label("Editar probabilidade dos números (%)");
+            numbersLabel.setFont(new Font(16));
+            probabilityEditor.getChildren().add(numbersLabel);
+            VBox superSevenContainer = createSuperSevenProbabilitySection(gameMode);
+            probabilityEditor.getChildren().add(superSevenContainer);
+        } else {
+            // Numbers section
+            Label numbersLabel = new Label("Editar probabilidade dos números (%)");
+            numbersLabel.setFont(new Font(16));
+            probabilityEditor.getChildren().add(numbersLabel);
 
-        VBox numbersContainer = createNumbersProbabilitySection(gameMode);
-        probabilityEditor.getChildren().add(numbersContainer);
+            VBox numbersContainer = createNumbersProbabilitySection(gameMode);
+            probabilityEditor.getChildren().add(numbersContainer);
 
-        // Trevos section (for Mais Milionária)
-        if (gameMode.name.equals("+Milionária")) {
-            Label trevosLabel = new Label("Editar probabilidade dos trevos (%)");
-            trevosLabel.setFont(new Font(16));
-            probabilityEditor.getChildren().add(trevosLabel);
+            // Trevos section (for Mais Milionária)
+            if (gameMode.name.equals("+Milionária")) {
+                Label trevosLabel = new Label("Editar probabilidade dos trevos (%)");
+                trevosLabel.setFont(new Font(16));
+                probabilityEditor.getChildren().add(trevosLabel);
 
-            VBox trevosContainer = createTrevosProbabilitySection(gameMode);
-            probabilityEditor.getChildren().add(trevosContainer);
-        }
+                VBox trevosContainer = createTrevosProbabilitySection(gameMode);
+                probabilityEditor.getChildren().add(trevosContainer);
+            }
 
-        // Months section (for Dia de Sorte)
-        if (gameMode.name.equals("Dia de Sorte")) {
-            Label monthsLabel = new Label("Editar probabilidade dos meses (%)");
-            monthsLabel.setFont(new Font(16));
-            probabilityEditor.getChildren().add(monthsLabel);
+            // Months section (for Dia de Sorte)
+            if (gameMode.name.equals("Dia de Sorte")) {
+                Label monthsLabel = new Label("Editar probabilidade dos meses (%)");
+                monthsLabel.setFont(new Font(16));
+                probabilityEditor.getChildren().add(monthsLabel);
 
-            VBox monthsContainer = createMonthsProbabilitySection(gameMode);
-            probabilityEditor.getChildren().add(monthsContainer);
+                VBox monthsContainer = createMonthsProbabilitySection(gameMode);
+                probabilityEditor.getChildren().add(monthsContainer);
+            }
         }
 
         ScrollPane scrollPane = new ScrollPane(probabilityEditor);
@@ -1042,6 +1060,11 @@ public class App extends Application {
     private VBox createNumbersProbabilitySection(GameMode gameMode) {
         VBox container = new VBox(10);
         container.setPadding(new javafx.geometry.Insets(5));
+
+        // Skip if it's Super Seven
+        if (gameMode.name.equals("Super Sete")) {
+            return container;
+        }
 
         for (int i = 0; i < gameMode.numbers.length; i++) {
             Button numberButton = new Button(gameMode.numbers[i].number);
@@ -1073,6 +1096,47 @@ public class App extends Application {
 
                 System.out.println(String.format("Number %s probability changed from %.2f%% to %.2f%%",
                         numberButton.getText(), oldValue.floatValue(), newValue.floatValue()));
+            });
+
+            HBox hbox = new HBox(10);
+            hbox.setAlignment(Pos.CENTER_LEFT);
+            hbox.getChildren().addAll(numberButton, probabilitySlider, probabilityLabel);
+            container.getChildren().add(hbox);
+        }
+        return container;
+    }
+
+    private VBox createSuperSevenProbabilitySection(GameMode gameMode) {
+        VBox container = new VBox(10);
+        container.setPadding(new javafx.geometry.Insets(5));
+
+        // Create sliders for numbers 0-9 that affect all columns
+        for (int i = 0; i < 10; i++) {
+            Button numberButton = new Button(String.valueOf(i));
+            numberButton.setDisable(true);
+            numberButton.setPrefWidth(60);
+
+            float initialProbability = gameMode.superSete.columns[0].numbers[i].probability;
+            updateButtonStyle(numberButton, initialProbability);
+
+            Slider probabilitySlider = new Slider(0, 100, initialProbability * 100);
+            probabilitySlider.setPrefWidth(200);
+            probabilitySlider.setMajorTickUnit(10);
+            probabilitySlider.setMinorTickCount(1);
+            probabilitySlider.setBlockIncrement(1);
+            probabilitySlider.setShowTickMarks(true);
+            probabilitySlider.setShowTickLabels(true);
+
+            Label probabilityLabel = new Label(String.format("%.0f%%", initialProbability * 100));
+            probabilityLabel.setPrefWidth(50);
+
+            int index = i;
+            probabilitySlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+                float newProbability = newValue.floatValue() / 100.0f;
+                // Update probability for this number across all columns
+                gameMode.updateSuperSevenProbability(index, newProbability);
+                probabilityLabel.setText(String.format("%.0f%%", newValue.floatValue()));
+                updateButtonStyle(numberButton, newProbability);
             });
 
             HBox hbox = new HBox(10);
@@ -1224,13 +1288,10 @@ public class App extends Application {
         for (Button button : buttons) {
             if (button.getText().startsWith("Coluna")) {
                 // If the button is a column header, start a new row
+                currentCol = 0;
                 currentRow++;
-                currentCol = 0;
                 gridPane.add(button, currentCol, currentRow);
-                // Span the column header across all columns if desired
-                // GridPane.setColumnSpan(button, columns);
-                currentRow++; // Move to the next row for the numbers
-                currentCol = 0;
+                currentCol++;
             } else {
                 gridPane.add(button, currentCol, currentRow);
                 currentCol++;
@@ -1305,12 +1366,11 @@ public class App extends Application {
             button.setId("button" + currentNumber);
             if ("|".equals(buttonText)) {
                 buttonText = "Coluna " + col;
-                col++;
                 button.setDisable(true);
                 button.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
                 button.setText(buttonText);
+                col++;
             }
-
             buttonList.add(button);
             currentNumber++;
         }

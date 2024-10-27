@@ -355,10 +355,6 @@ public class Game {
          */
         public OddNumbers[] oddNumbers;
         /**
-         * Array de números primos
-         */
-        public PrimeNumbers[] primeNumbers;
-        /**
          * Total de números
          */
         public int totalNumbers;
@@ -371,10 +367,6 @@ public class Game {
          */
         public int totalOddNumbers;
         /**
-         * Total de números primos
-         */
-        public int totalPrimeNumbers;
-        /**
          * Porcentagem de números pares
          */
         public Float evenNumberPercentage;
@@ -382,10 +374,6 @@ public class Game {
          * Porcentagem de números ímpares
          */
         public Float oddNumberPercentage;
-        /**
-         * Porcentagem de números primos
-         */
-        public Float primeNumberPercentage;
 
         /**
          * Construtor da classe Data. Inicializa todos os campos da classe.
@@ -394,14 +382,11 @@ public class Game {
             this.games = games;
             this.evenNumbers = getEvenNumbers(gameMode);
             this.oddNumbers = getOddNumbers(gameMode);
-            this.primeNumbers = getPrimeNumbers(gameMode);
             this.totalNumbers = getTotalNumbers();
             this.totalEvenNumbers = getTotalEvenNumbers();
             this.totalOddNumbers = getTotalOddNumbers();
-            this.totalPrimeNumbers = getTotalPrimeNumbers();
             this.evenNumberPercentage = getEvenNumberPercentage();
             this.oddNumberPercentage = getOddNumberPercentage();
-            this.primeNumberPercentage = getPrimeNumberPercentage();
         }
 
         public Data() {
@@ -472,40 +457,6 @@ public class Game {
         }
 
         /**
-         * Obtém os números primos do jogo.
-         *
-         * @return Array de números primos
-         */
-        public final PrimeNumbers[] getPrimeNumbers(GameMode gameMode) {
-            if (gameMode == null || gameMode.numbers == null) {
-                return new PrimeNumbers[0];
-            }
-
-            this.primeNumbers = new PrimeNumbers[gameMode.numbers.length];
-            for (int i = 0; i < gameMode.numbers.length; i++) {
-                if (gameMode.numbers[i] != null && gameMode.numbers[i].number != null) {
-                    int num = Integer.parseInt(gameMode.numbers[i].number);
-                    if (isPrime(num)) {
-                        this.primeNumbers[i] = new PrimeNumbers();
-                        this.primeNumbers[i].primeNumber = gameMode.numbers[i].number;
-                    }
-                    for (String[] game : games) {
-                        for (String gameNumber : game) {
-                            if (gameNumber != null && gameNumber.equals(gameMode.numbers[i].number)) {
-                                if (this.primeNumbers[i] != null) {
-                                    this.primeNumbers[i].primeAmount++;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return Arrays.stream(this.primeNumbers)
-                    .filter(Objects::nonNull)
-                    .toArray(PrimeNumbers[]::new);
-        }
-
-        /**
          * Calcula o total de números no jogo.
          *
          * @return Total de números
@@ -560,21 +511,6 @@ public class Game {
         }
 
         /**
-         * Calcula o total de números primos no jogo.
-         *
-         * @return Total de números primos
-         */
-        public final int getTotalPrimeNumbers() {
-            int totalPrimeNumber = 0;
-            for (PrimeNumbers primeNumber : primeNumbers) {
-                if (primeNumber != null) {
-                    totalPrimeNumber += primeNumber.primeAmount;
-                }
-            }
-            return totalPrimeNumber;
-        }
-
-        /**
          * Calcula a porcentagem de números pares no jogo.
          *
          * @return Porcentagem de números pares
@@ -592,16 +528,6 @@ public class Game {
         public final Float getOddNumberPercentage() {
             oddNumberPercentage = (float) totalOddNumbers / totalNumbers * 100;
             return oddNumberPercentage;
-        }
-
-        /**
-         * Calcula a porcentagem de números primos no jogo.
-         *
-         * @return Porcentagem de números primos
-         */
-        public final Float getPrimeNumberPercentage() {
-            primeNumberPercentage = (float) totalPrimeNumbers / totalNumbers * 100;
-            return primeNumberPercentage;
         }
 
         /**

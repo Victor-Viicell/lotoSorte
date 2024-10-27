@@ -138,7 +138,24 @@ public class GameMode {
                     this.diaDeSorte.months[index].probability = probability;
                 }
                 break;
+            case "superSeven":
+                if (this.superSete != null) {
+                    // Update probability for all columns
+                    for (SuperSete.Columns column : this.superSete.columns) {
+                        column.numbers[index].probability = probability;
+                    }
+                }
+                break;
         }
+    }
+
+    public void updateSuperSevenProbability(int numberIndex, float probability) {
+        // Update the probability for the specific number across all columns
+        for (SuperSete.Columns column : superSete.columns) {
+            column.numbers[numberIndex].probability = probability;
+        }
+        // Also update the main numbers array to ensure persistence
+        this.numbers[numberIndex].probability = probability;
     }
 
     /**
@@ -237,11 +254,13 @@ public class GameMode {
         /**
          * O número representado como uma string.
          */
+        @JsonProperty
         public String number;
 
         /**
          * A probabilidade associada ao número.
          */
+        @JsonProperty
         public Float probability;
 
         public Numbers() {
@@ -496,11 +515,13 @@ public class GameMode {
      * Representa o jogo Super Sete. Esta classe encapsula a lógica e estrutura
      * do jogo Super Sete.
      */
+    @JsonSerialize
     public static class SuperSete {
 
         /**
          * Array de colunas que compõem o jogo Super Sete.
          */
+        @JsonProperty
         public Columns[] columns;
 
         /**
@@ -515,6 +536,7 @@ public class GameMode {
          * Classe interna que representa uma coluna do jogo Super Sete. Cada
          * coluna contém números, limites de seleção e probabilidades.
          */
+        @JsonSerialize
         public static class Columns {
 
             /**
@@ -522,22 +544,26 @@ public class GameMode {
              * inicializado chamando o método getNumbers() com parâmetros
              * específicos.
              */
+            @JsonProperty
             public Numbers[] numbers = getNumbers(10, false, true);
 
             /**
              * Limite máximo de números que podem ser selecionados nesta coluna.
              */
+            @JsonProperty
             public Integer columnSelectionLimit = 3;
 
             /**
              * Contador de números atualmente selecionados nesta coluna.
              */
+            @JsonProperty
             public Integer columnSelecteds = 0;
 
             /**
              * Probabilidade associada a esta coluna. Inicialmente definida como
              * 1.0 (100%).
              */
+            @JsonProperty
             public Float probability = 1.0f;
 
             public Columns() {
@@ -579,35 +605,42 @@ public class GameMode {
          * coluna.
          */
         public final String[][] genSuperSevenBase(int selections) {
-            // Inicializa a matriz de seleção com o tamanho apropriado
             String[][] selection = new String[columns.length][3];
             Random random = new Random();
             int selected = 0;
 
-            // Cria uma lista de índices de colunas disponíveis
+            // First pass: ensure at least one selection per column using probabilities
             List<Integer> availableColumns = IntStream.range(0, columns.length).boxed().collect(Collectors.toList());
-
-            // Primeira passagem: garante pelo menos uma seleção por coluna
             while (!availableColumns.isEmpty() && selected < selections) {
                 int randomColumnIndex = random.nextInt(availableColumns.size());
                 int columnIndex = availableColumns.remove(randomColumnIndex);
-                int randomNumberIndex = random.nextInt(10);
+
+                // Use probability to select number
+                float randomPercentage = random.nextFloat();
+                int randomNumberIndex;
+                do {
+                    randomNumberIndex = random.nextInt(10);
+                } while (columns[columnIndex].numbers[randomNumberIndex].probability <= randomPercentage);
+
                 selection[columnIndex][0] = columns[columnIndex].numbers[randomNumberIndex].number;
                 columns[columnIndex].columnSelecteds = 1;
                 selected++;
             }
             sortColumns(selection);
 
-            // Segunda passagem: adiciona uma segunda seleção a cada coluna
+            // Second pass: add second selection to each column using probabilities
             availableColumns = IntStream.range(0, columns.length).boxed().collect(Collectors.toList());
             while (!availableColumns.isEmpty() && selected < selections) {
                 int randomColumnIndex = random.nextInt(availableColumns.size());
                 int columnIndex = availableColumns.remove(randomColumnIndex);
                 if (columns[columnIndex].columnSelecteds == 1) {
+                    float randomPercentage = random.nextFloat();
                     int randomNumberIndex;
                     do {
                         randomNumberIndex = random.nextInt(10);
-                    } while (selection[columnIndex][0].equals(columns[columnIndex].numbers[randomNumberIndex].number));
+                    } while (columns[columnIndex].numbers[randomNumberIndex].probability <= randomPercentage
+                            || selection[columnIndex][0].equals(columns[columnIndex].numbers[randomNumberIndex].number));
+
                     selection[columnIndex][1] = columns[columnIndex].numbers[randomNumberIndex].number;
                     columns[columnIndex].columnSelecteds = 2;
                     selected++;
@@ -615,17 +648,20 @@ public class GameMode {
             }
             sortColumns(selection);
 
-            // Terceira passagem: adiciona aleatoriamente uma terceira seleção às colunas até atingir o número de seleções
+            // Third pass: add third selection to columns until reaching desired selections
             availableColumns = IntStream.range(0, columns.length).boxed().collect(Collectors.toList());
             while (!availableColumns.isEmpty() && selected < selections) {
                 int randomColumnIndex = random.nextInt(availableColumns.size());
                 int columnIndex = availableColumns.remove(randomColumnIndex);
                 if (columns[columnIndex].columnSelecteds == 2) {
+                    float randomPercentage = random.nextFloat();
                     int randomNumberIndex;
                     do {
                         randomNumberIndex = random.nextInt(10);
-                    } while (selection[columnIndex][0].equals(columns[columnIndex].numbers[randomNumberIndex].number)
+                    } while (columns[columnIndex].numbers[randomNumberIndex].probability <= randomPercentage
+                            || selection[columnIndex][0].equals(columns[columnIndex].numbers[randomNumberIndex].number)
                             || selection[columnIndex][1].equals(columns[columnIndex].numbers[randomNumberIndex].number));
+
                     selection[columnIndex][2] = columns[columnIndex].numbers[randomNumberIndex].number;
                     columns[columnIndex].columnSelecteds = 3;
                     selected++;
@@ -633,11 +669,10 @@ public class GameMode {
             }
             sortColumns(selection);
 
-            // Ordena os números dentro de cada coluna
+            // Sort numbers within each column and remove nulls
             for (String[] column : selection) {
                 Arrays.sort(column, Comparator.nullsLast(Comparator.naturalOrder()));
             }
-            // remove os nulos
             selection = Arrays.stream(selection).filter(Objects::nonNull).toArray(String[][]::new);
 
             return selection;
