@@ -1,5 +1,6 @@
 package com.app;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -48,6 +49,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -63,7 +65,7 @@ public class App extends Application {
             + File.separator + "java" + File.separator + "com" + File.separator + "app" + File.separator;
     public static final String SRC_FOLDER_PATH_GAMES = SRC_FOLDER_PATH + "Games" + File.separator;
     public static final String SRC_FOLDER_PATH_RESULTS = SRC_FOLDER_PATH + "Results" + File.separator;
-    public static final String SRC_FOLDER_PATH_CONFIGS = SRC_FOLDER_PATH_GAMES + "Configs" + File.separator;
+    public static final String SRC_FOLDER_PATH_PDF = SRC_FOLDER_PATH + "PDF" + File.separator;
 
     private ChoiceBox<String> choiceBox;
     private ChoiceBox<String> numberAmount;
@@ -115,7 +117,8 @@ public class App extends Application {
         window = stage;
 
         // Initialize mainTabPane
-        mainTabPane = mainTabPane();
+        mainTabPane = new TabPane();
+        initializeMainTabPane();
 
         VBox sideMenu = sideMenu();
 
@@ -128,17 +131,40 @@ public class App extends Application {
         setStage(scene, window);
     }
 
-    private TabPane mainTabPane() {
-        TabPane mTabPane = new TabPane();
+    private Button createOpenPDFButton() {
+        Button openPDFButton = new Button("Abrir Guia PDF");
+        openPDFButton.setMaxWidth(Double.MAX_VALUE);
+        openPDFButton.setOnAction(e -> {
+            File pdfFolder = new File(SRC_FOLDER_PATH_PDF);
+            File[] pdfFiles = pdfFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".pdf"));
 
-        // You can start with an empty TabPane or add a default tab
-        // For example, a welcome tab
-        Tab welcomeTab = new Tab("Welcome");
+            if (pdfFiles != null && pdfFiles.length > 0) {
+                try {
+                    Desktop.getDesktop().open(pdfFiles[0]);
+                } catch (IOException ex) {
+                    System.out.println("Error opening PDF: " + ex.getMessage());
+                }
+            }
+        });
+        return openPDFButton;
+    }
+
+    private void initializeMainTabPane() {
+        mainTabPane = new TabPane();
+        Tab welcomeTab = new Tab("");
         welcomeTab.setClosable(false);
-        welcomeTab.setContent(new VBox());
-        mTabPane.getTabs().add(welcomeTab);
 
-        return mTabPane;
+        // Create centered label with bold text
+        Label welcomeLabel = new Label("LOTOSORTE");
+        welcomeLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 124px; -fx-text-fill: #f0f0f0;");
+
+        // Create container for centering
+        StackPane centerPane = new StackPane(welcomeLabel);
+        centerPane.setPrefWidth(width);
+        centerPane.setPrefHeight(height);
+
+        welcomeTab.setContent(centerPane);
+        mainTabPane.getTabs().add(welcomeTab);
     }
 
     private void exportResultToPDF(Result result) {
@@ -459,7 +485,7 @@ public class App extends Application {
         button1.setOnAction(e -> openTab("Gerar Jogo"));
         button2.setOnAction(e -> openTab("Gerar Resultado"));
 
-        sideMenu.getChildren().addAll(sideTabPane, button1, button2);
+        sideMenu.getChildren().addAll(sideTabPane, button1, button2, createOpenPDFButton());
         return sideMenu;
     }
 
@@ -1359,6 +1385,7 @@ public class App extends Application {
         scrollPaneGenGame.setPrefWidth(width);
         scrollPaneGenGame.setPrefHeight(height);
         scrollPaneGenGame.setPadding(new javafx.geometry.Insets(5));
+        scrollPaneGenGame.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPaneGenGame.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
 
         // Initialize and assign the instance variable
@@ -1692,7 +1719,7 @@ public class App extends Application {
 
         // Create a new tab since it doesn't exist
         Tab newTab = new Tab(tabName);
-        newTab.setClosable(false); // Prevent the tab from being closed
+        newTab.setClosable(true);
 
         // Set the content of the tab based on the tabName
         switch (tabName) {

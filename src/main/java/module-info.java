@@ -7,6 +7,7 @@ module com.app {
     requires kernel;
     requires layout;
     requires io;
+    requires java.desktop;
 
     opens com.app to javafx.fxml, com.fasterxml.jackson.databind;
     exports com.app;
