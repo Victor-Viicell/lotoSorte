@@ -4,11 +4,15 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * Representa o resultado de um jogo de loteria.
  */
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class Result {
 
     /**
@@ -24,7 +28,7 @@ public class Result {
     /**
      * Instância de MaisMilionaria, se aplicável.
      */
-    public MaisMilionaria maisMilhionaria;
+    public MaisMilionaria maisMilionaria;
 
     /**
      * Instância de MegaSena, se aplicável.
@@ -71,7 +75,39 @@ public class Result {
      */
     public String luckyMonth;
 
+    /**
+     * Simula um resultado de jogo com base no modo de jogo fornecido.
+     *
+     * @param gameMode O modo de jogo que será utilizado para a simulação. Este
+     * parâmetro define as regras e configurações específicas do jogo.
+     *
+     * @return Retorna uma nova instância de Game (jogo) configurada com os
+     * parâmetros do modo de jogo especificado, incluindo a quantidade mínima de
+     * seleções e números extras (trevos) quando aplicável.
+     *
+     * @apiNote Este método é especialmente útil para criar simulações de jogos,
+     * principalmente para o modo "+Milionária" que possui regras específicas
+     * para números extras (trevos).
+     */
+    public Game simulateResult(GameMode gameMode) {
+        Game simGame;
+        switch (gameMode.name) {
+            case "+Milionária":
+                simGame = new Game(gameMode, 1, gameMode.minSelections, gameMode.maisMilionaria.minTrevos);
+                break;
+            case "Dia de Sorte":
+                simGame = new Game(gameMode, 1, gameMode.minSelections, 1);
+                break;
+            default:
+                simGame = new Game(gameMode, 1, gameMode.minSelections, 0);
+                break;
+        }
+        return simGame;
+    }
+
     public Result() {
+        this.championNumbers = new String[0];
+        this.championTrevos = new String[0];
     }
 
     /**
@@ -84,14 +120,14 @@ public class Result {
      */
     public Result(Game game, String[] championNumbers, String[] championTrevos, String luckyMonth) {
         this.game = game;
-        this.championNumbers = championNumbers;
-        this.championTrevos = championTrevos;
+        this.championNumbers = championNumbers != null ? championNumbers : new String[0];
+        this.championTrevos = championTrevos != null ? championTrevos : new String[0];
         this.luckyMonth = luckyMonth;
 
         // Inicializa a instância apropriada com base no modo de jogo
         switch (game.gameMode.name) {
             case "+Milionária":
-                this.maisMilhionaria = new MaisMilionaria();
+                this.maisMilionaria = new MaisMilionaria();
                 break;
             case "Mega-Sena":
                 this.megaSena = new MegaSena();
@@ -124,7 +160,7 @@ public class Result {
      * Classe base para representar um jogo genérico. Esta classe serve como uma
      * estrutura básica para diferentes tipos de jogos.
      */
-    public class BaseGame {
+    public static class BaseGame {
 
         /**
          * Array de strings para armazenar os números do jogo. Cada elemento do
@@ -138,12 +174,15 @@ public class Result {
 
     public void saveToFile(String fileName) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
+        mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.writeValue(new File(fileName), this);
     }
 
-    public static Game loadFromFile(String fileName) throws Exception {
+    public static Result loadFromFile(String fileName) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(new File(fileName), Game.class);
+        mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        return mapper.readValue(new File(fileName), Result.class);
     }
 
     /**
@@ -212,21 +251,30 @@ public class Result {
     }
 
     /**
-     * Representa uma aposta na loteria Mais Milionária.
+     * Representa uma aposta na loteria Mais Milionária. Esta classe é definida
+     * como estática, permitindo seu uso sem a necessidade de instanciar a
+     * classe externa.
      */
-    public class MMilionaria {
+    public static class MMilionaria {
 
         /**
-         * Array contendo os números escolhidos para a aposta.
+         * Array contendo os números escolhidos para a aposta. Cada elemento do
+         * array é uma String representando um número da aposta.
          */
         public String[] numbers;
 
         /**
          * Array contendo os trevos escolhidos para a aposta. Os trevos são
-         * símbolos adicionais que podem aumentar o prêmio.
+         * símbolos adicionais que podem aumentar o prêmio. Cada elemento do
+         * array é uma String representando um trevo.
          */
         public String[] trevos;
 
+        /**
+         * Construtor padrão da classe MMilionaria. Este construtor não recebe
+         * parâmetros e não inicializa os arrays. Os arrays numbers e trevos
+         * devem ser inicializados separadamente após a criação do objeto.
+         */
         public MMilionaria() {
         }
     }
@@ -242,7 +290,7 @@ public class Result {
      */
     public final MMilionaria[] checkMMilionaria(int point, int extra, boolean orNone) {
         // Inicializa o array de resultados com o tamanho igual à quantidade de jogos
-        MMilionaria[] result = new MMilionaria[game.amount];
+        MMilionaria[] resultMilionarias = new MMilionaria[game.amount];
         int currentPoints;
         int trevoPoints;
 
@@ -273,23 +321,23 @@ public class Result {
 
             // Verifica se o jogo é vencedor com base nos critérios estabelecidos
             if (currentPoints == point && (trevoPoints == extra || orNone)) {
-                result[i] = new MMilionaria(); // Cria uma nova instância de MMilionaria
-                result[i].numbers = game.games[i];
-                result[i].trevos = game.maisMilionaria.trevos[i];
+                resultMilionarias[i] = new MMilionaria(); // Cria uma nova instância de MMilionaria
+                resultMilionarias[i].numbers = game.games[i];
+                resultMilionarias[i].trevos = game.maisMilionaria.trevos[i];
             } else {
-                result[i] = null;
+                resultMilionarias[i] = null;
             }
         }
 
-        // Remove os elementos nulos do array de resultados
-        result = Arrays.stream(result).filter(Objects::nonNull).toArray(MMilionaria[]::new);
-        return result;
+        // Remove os elementos nulos do array de resultMilionariasados
+        resultMilionarias = Arrays.stream(resultMilionarias).filter(Objects::nonNull).toArray(MMilionaria[]::new);
+        return resultMilionarias;
     }
 
     /**
      * Representa uma jogada da loteria "Dia de Sorte".
      */
-    public class DSorte {
+    public static class DSorte {
 
         /**
          * Array contendo os números escolhidos para a jogada.
@@ -474,7 +522,6 @@ public class Result {
             this.faixa2 = checkDSorte(6);
             this.faixa1 = checkDSorte(7);
         }
-
     }
 
     public class SuperSete {

@@ -1,14 +1,31 @@
 package com.app;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.properties.TextAlignment;
 
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -34,6 +51,7 @@ import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
@@ -52,7 +70,6 @@ public class App extends Application {
     private VBox rightPane;
     private GridPane trevos;
     private GridPane monthsButtons;
-    @SuppressWarnings("unused")
     private GameMode currentGameMode;
     public static GameMode[] gameModes = {
         new GameMode("+Milionária", 50, 6, 12, true, false, 6.00f),
@@ -66,11 +83,22 @@ public class App extends Application {
     };
     private int currentNumberAmountValue;
     private VBox jogosButtonsContainer;
+    private VBox resultsButtonsContainer;
+    private Result result;
+    private String[] selectedNumbers = new String[0];
+    private String[] selectedTrevos = new String[0];
+    private String luckyMonth = "";
+
+    private Game loadedGame;
+    private Result loadedResult;
 
     // Get system window size
     public static double width = Screen.getPrimary().getBounds().getWidth();
     public static double height = Screen.getPrimary().getBounds().getHeight();
-    private GridPane gameNumbers;
+    private GridPane genGameNumbers; // For GenGame tab
+    private GridPane genResultNumbers; // For GenResult tab
+    private GridPane specialGrid;
+    private GridPane numbersGrid;
 
     Stage window;
     private static final Image icon = new Image(App.class.getResourceAsStream("icon.png"));
@@ -113,9 +141,299 @@ public class App extends Application {
         return mTabPane;
     }
 
+    private void exportResultToPDF(Result result) {
+        try {
+            // Create FileChooser
+            javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+            fileChooser.setTitle("Save PDF File");
+
+            // Set default directory to Downloads folder
+            String userHome = System.getProperty("user.home");
+            String downloadsPath = userHome + File.separator + "Downloads";
+            fileChooser.setInitialDirectory(new File(downloadsPath));
+
+            // Set default file name with timestamp
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+            String defaultFileName = result.game.gameMode.name + "_Resultado_" + timestamp + ".pdf";
+            fileChooser.setInitialFileName(defaultFileName);
+
+            // Set extension filter for PDF files
+            FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("PDF files (*.pdf)", "*.pdf");
+            fileChooser.getExtensionFilters().add(extFilter);
+
+            // Show save dialog
+            File selectedFile = fileChooser.showSaveDialog(window);
+
+            if (selectedFile != null) {
+                PdfDocument pdf = new PdfDocument(new PdfWriter(selectedFile.getAbsolutePath()));
+                try (Document document = new Document(pdf)) {
+                    document.add(new Paragraph(result.game.gameMode.name)
+                            .setFontSize(20)
+                            .setBold()
+                            .setTextAlignment(TextAlignment.CENTER));
+
+                    document.add(new Paragraph("\nNúmeros Sorteados:")
+                            .setFontSize(16)
+                            .setBold());
+
+                    if (result.game.gameMode.name.equals("Super Sete")) {
+                        for (int i = 0; i < result.championNumbers.length; i++) {
+                            document.add(new Paragraph("Coluna " + (i + 1) + ": " + result.championNumbers[i]));
+                        }
+                    } else {
+                        document.add(new Paragraph(String.join(", ", result.championNumbers)));
+                    }
+
+                    // Add trevos for +Milionária
+                    if (result.game.gameMode.name.equals("+Milionária") && result.championTrevos != null) {
+                        document.add(new Paragraph("\nTrevos Sorteados:")
+                                .setFontSize(16)
+                                .setBold());
+                        document.add(new Paragraph(String.join(", ", result.championTrevos)));
+                    }
+
+                    // Add month for Dia de Sorte
+                    if (result.game.gameMode.name.equals("Dia de Sorte") && result.luckyMonth != null) {
+                        document.add(new Paragraph("\nMês Sorteado:")
+                                .setFontSize(16)
+                                .setBold());
+                        document.add(new Paragraph(result.luckyMonth));
+                    }
+
+                    // Add faixas information
+                    addFaixasInformation(document, result);
+                }
+            }
+        } catch (FileNotFoundException e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+            stage.getIcons().add(icon);
+            alert.setTitle("Erro");
+            alert.setHeaderText("Erro ao gerar PDF");
+            alert.setContentText("Ocorreu um erro ao tentar gerar o arquivo PDF.");
+            alert.showAndWait();
+        }
+    }
+
+    private void addFaixasInformation(Document document, Result result) throws FileNotFoundException {
+        document.add(new Paragraph("\nFaixas de Premiação:")
+                .setFontSize(16)
+                .setBold());
+
+        switch (result.game.gameMode.name) {
+            case "+Milionária":
+                addFaixaInfo(document, "Faixa 1 - 6 números + 2 trevos", result.maisMilionaria.faixa1, "Total de jogos premiados: " + result.maisMilionaria.faixa1.length);
+                addFaixaInfo(document, "Faixa 2 - 6 números + 1 ou 0 trevos", result.maisMilionaria.faixa2, "Total de jogos premiados: " + result.maisMilionaria.faixa2.length);
+                addFaixaInfo(document, "Faixa 3 - 5 números + 2 trevos", result.maisMilionaria.faixa3, "Total de jogos premiados: " + result.maisMilionaria.faixa3.length);
+                addFaixaInfo(document, "Faixa 4 - 5 números + 1 ou 0 trevos", result.maisMilionaria.faixa4, "Total de jogos premiados: " + result.maisMilionaria.faixa4.length);
+                addFaixaInfo(document, "Faixa 5 - 4 números + 2 trevos", result.maisMilionaria.faixa5, "Total de jogos premiados: " + result.maisMilionaria.faixa5.length);
+                addFaixaInfo(document, "Faixa 6 - 4 números + 1 ou 0 trevos", result.maisMilionaria.faixa6, "Total de jogos premiados: " + result.maisMilionaria.faixa6.length);
+                addFaixaInfo(document, "Faixa 7 - 3 números + 2 trevos", result.maisMilionaria.faixa7, "Total de jogos premiados: " + result.maisMilionaria.faixa7.length);
+                addFaixaInfo(document, "Faixa 8 - 3 números + 1 trevo", result.maisMilionaria.faixa8, "Total de jogos premiados: " + result.maisMilionaria.faixa8.length);
+                addFaixaInfo(document, "Faixa 9 - 2 números + 2 trevos", result.maisMilionaria.faixa9, "Total de jogos premiados: " + result.maisMilionaria.faixa9.length);
+                addFaixaInfo(document, "Faixa 10 - 2 números + 1 trevo", result.maisMilionaria.faixa10, "Total de jogos premiados: " + result.maisMilionaria.faixa10.length);
+                break;
+            case "Mega-Sena":
+                addFaixaInfo(document, "Faixa 1 - Sena", result.megaSena.faixa1, "Total de jogos premiados: " + result.megaSena.faixa1.length);
+                addFaixaInfo(document, "Faixa 2 - Quina", result.megaSena.faixa2, "Total de jogos premiados: " + result.megaSena.faixa2.length);
+                addFaixaInfo(document, "Faixa 3 - Quadra", result.megaSena.faixa3, "Total de jogos premiados: " + result.megaSena.faixa3.length);
+                break;
+            case "Lotofácil":
+                addFaixaInfo(document, "Faixa 1 - 15 acertos", result.lotoFacil.faixa1, "Total de jogos premiados: " + result.lotoFacil.faixa1.length);
+                addFaixaInfo(document, "Faixa 2 - 14 acertos", result.lotoFacil.faixa2, "Total de jogos premiados: " + result.lotoFacil.faixa2.length);
+                addFaixaInfo(document, "Faixa 3 - 13 acertos", result.lotoFacil.faixa3, "Total de jogos premiados: " + result.lotoFacil.faixa3.length);
+                addFaixaInfo(document, "Faixa 4 - 12 acertos", result.lotoFacil.faixa4, "Total de jogos premiados: " + result.lotoFacil.faixa4.length);
+                addFaixaInfo(document, "Faixa 5 - 11 acertos", result.lotoFacil.faixa5, "Total de jogos premiados: " + result.lotoFacil.faixa5.length);
+                break;
+            case "Quina":
+                addFaixaInfo(document, "Faixa 1 - Quina", result.quina.faixa1, "Total de jogos premiados: " + result.quina.faixa1.length);
+                addFaixaInfo(document, "Faixa 2 - Quadra", result.quina.faixa2, "Total de jogos premiados: " + result.quina.faixa2.length);
+                addFaixaInfo(document, "Faixa 3 - Terno", result.quina.faixa3, "Total de jogos premiados: " + result.quina.faixa3.length);
+                addFaixaInfo(document, "Faixa 4 - Duque", result.quina.faixa4, "Total de jogos premiados: " + result.quina.faixa4.length);
+                break;
+            case "Lotomania":
+                addFaixaInfo(document, "Faixa 1 - 20 acertos", result.lotoMania.faixa1, "Total de jogos premiados: " + result.lotoMania.faixa1.length);
+                addFaixaInfo(document, "Faixa 2 - 19 acertos", result.lotoMania.faixa2, "Total de jogos premiados: " + result.lotoMania.faixa2.length);
+                addFaixaInfo(document, "Faixa 3 - 18 acertos", result.lotoMania.faixa3, "Total de jogos premiados: " + result.lotoMania.faixa3.length);
+                addFaixaInfo(document, "Faixa 4 - 17 acertos", result.lotoMania.faixa4, "Total de jogos premiados: " + result.lotoMania.faixa4.length);
+                addFaixaInfo(document, "Faixa 5 - 16 acertos", result.lotoMania.faixa5, "Total de jogos premiados: " + result.lotoMania.faixa5.length);
+                addFaixaInfo(document, "Faixa 6 - 15 acertos", result.lotoMania.faixa6, "Total de jogos premiados: " + result.lotoMania.faixa6.length);
+                addFaixaInfo(document, "Faixa 7 - 0 acertos", result.lotoMania.faixa7, "Total de jogos premiados: " + result.lotoMania.faixa7.length);
+                break;
+            case "Dupla Sena":
+                addFaixaInfo(document, "Faixa 1 - Sena", result.duplaSena.faixa1, "Total de jogos premiados: " + result.duplaSena.faixa1.length);
+                addFaixaInfo(document, "Faixa 2 - Quina", result.duplaSena.faixa2, "Total de jogos premiados: " + result.duplaSena.faixa2.length);
+                addFaixaInfo(document, "Faixa 3 - Quadra", result.duplaSena.faixa3, "Total de jogos premiados: " + result.duplaSena.faixa3.length);
+                addFaixaInfo(document, "Faixa 4 - Terno", result.duplaSena.faixa4, "Total de jogos premiados: " + result.duplaSena.faixa4.length);
+                break;
+            case "Dia de Sorte":
+                addFaixaInfo(document, "Faixa 1 - 7 acertos + Mês", result.diaDeSorte.faixa1, "Total de jogos premiados: " + result.diaDeSorte.faixa1.length);
+                addFaixaInfo(document, "Faixa 2 - 6 acertos + Mês", result.diaDeSorte.faixa2, "Total de jogos premiados: " + result.diaDeSorte.faixa2.length);
+                addFaixaInfo(document, "Faixa 3 - 5 acertos + Mês", result.diaDeSorte.faixa3, "Total de jogos premiados: " + result.diaDeSorte.faixa3.length);
+                addFaixaInfo(document, "Faixa 4 - 4 acertos + Mês", result.diaDeSorte.faixa4, "Total de jogos premiados: " + result.diaDeSorte.faixa4.length);
+                addFaixaInfo(document, "Faixa 5 - Mês", result.diaDeSorte.faixa5, "Total de jogos premiados: " + result.diaDeSorte.faixa5.length);
+                break;
+            case "Super Sete":
+                addFaixaInfo(document, "Faixa 1 - 7 colunas", result.superSete.faixa1, "Total de jogos premiados: " + result.superSete.faixa1.length);
+                addFaixaInfo(document, "Faixa 2 - 6 colunas", result.superSete.faixa2, "Total de jogos premiados: " + result.superSete.faixa2.length);
+                addFaixaInfo(document, "Faixa 3 - 5 colunas", result.superSete.faixa3, "Total de jogos premiados: " + result.superSete.faixa3.length);
+                addFaixaInfo(document, "Faixa 4 - 4 colunas", result.superSete.faixa4, "Total de jogos premiados: " + result.superSete.faixa4.length);
+                addFaixaInfo(document, "Faixa 5 - 3 colunas", result.superSete.faixa5, "Total de jogos premiados: " + result.superSete.faixa5.length);
+                break;
+        }
+    }
+
+    private void addFaixaInfo(Document document, String faixaName, Object[] faixa, String totalGames) throws FileNotFoundException {
+        if (faixa != null && faixa.length > 0) {
+            document.add(new Paragraph("\n" + faixaName + ":")
+                    .setFontSize(14)
+                    .setBold());
+
+            document.add(new Paragraph(totalGames)
+                    .setFontSize(12)
+                    .setItalic());
+
+            for (int i = 0; i < faixa.length; i++) {
+                document.add(new Paragraph("Jogo " + (i + 1) + ":"));
+
+                if (faixa[i] instanceof Result.MMilionaria) {
+                    Result.MMilionaria game = (Result.MMilionaria) faixa[i];
+                    document.add(new Paragraph("Números: " + String.join(", ", game.numbers)));
+                    document.add(new Paragraph("Trevos: " + String.join(", ", game.trevos)));
+                } else if (faixa[i] instanceof Result.BaseGame) {
+                    Result.BaseGame game = (Result.BaseGame) faixa[i];
+                    if (game.numbers != null) {
+                        if (game.numbers.length > 0 && game.numbers[0].contains("|")) {
+                            // Super Sete format
+                            List<String> columns = new ArrayList<>();
+                            StringBuilder currentColumn = new StringBuilder();
+                            int columnCount = 1;
+
+                            for (String num : game.numbers) {
+                                if (num.equals("|")) {
+                                    if (currentColumn.length() > 0) {
+                                        columns.add("Coluna " + columnCount + ": " + currentColumn.toString().trim());
+                                        columnCount++;
+                                        currentColumn = new StringBuilder();
+                                    }
+                                } else {
+                                    currentColumn.append(num).append(" ");
+                                }
+                            }
+                            if (currentColumn.length() > 0) {
+                                columns.add("Coluna " + columnCount + ": " + currentColumn.toString().trim());
+                            }
+                            document.add(new Paragraph(String.join("\n", columns)));
+                        } else {
+                            // Standard format for other games
+                            document.add(new Paragraph("Números: " + String.join(", ", game.numbers)));
+                        }
+                    }
+                } else if (faixa[i] instanceof Result.DSorte) {
+                    Result.DSorte game = (Result.DSorte) faixa[i];
+                    document.add(new Paragraph("Números: " + String.join(", ", game.numbers)));
+                    document.add(new Paragraph("Mês: " + game.month));
+                }
+            }
+        }
+    }
+
+    private void exportGameToPDF(Game gameToExport) {
+        try {
+            // Create FileChooser
+            javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+            fileChooser.setTitle("Save PDF File");
+
+            // Set default directory to Downloads folder
+            String userHome = System.getProperty("user.home");
+            String downloadsPath = userHome + File.separator + "Downloads";
+            fileChooser.setInitialDirectory(new File(downloadsPath));
+
+            // Set default file name with timestamp
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+            String defaultFileName = gameToExport.gameMode.name + "_Bolao_" + timestamp + ".pdf";
+            fileChooser.setInitialFileName(defaultFileName);
+
+            // Set extension filter for PDF files
+            FileChooser.ExtensionFilter extFilter
+                    = new FileChooser.ExtensionFilter("PDF files (*.pdf)", "*.pdf");
+            fileChooser.getExtensionFilters().add(extFilter);
+
+            // Show save dialog
+            File selectedFile = fileChooser.showSaveDialog(window);
+
+            if (selectedFile != null) {
+                PdfDocument pdf = new PdfDocument(new PdfWriter(selectedFile.getAbsolutePath()));
+                try (Document document = new Document(pdf)) {
+                    document.add(new Paragraph(gameToExport.gameMode.name)
+                            .setFontSize(20)
+                            .setBold()
+                            .setTextAlignment(TextAlignment.CENTER));
+
+                    document.add(new Paragraph("\nInformações do Jogo:")
+                            .setFontSize(16)
+                            .setBold());
+                    document.add(new Paragraph("Quantidade de Jogos: " + gameToExport.amount));
+                    document.add(new Paragraph("Números por Jogo: " + gameToExport.numbers));
+                    document.add(new Paragraph("Custo Total: " + gameToExport.totalCost));
+
+                    document.add(new Paragraph("\nJogos Gerados:")
+                            .setFontSize(16)
+                            .setBold());
+
+                    for (int i = 0; i < gameToExport.games.length; i++) {
+                        document.add(new Paragraph("\nJogo " + (i + 1) + ":"));
+
+                        if (gameToExport.gameMode.name.equals("Super Sete")) {
+                            List<String> columns = new ArrayList<>();
+                            StringBuilder currentColumn = new StringBuilder();
+                            int columnCount = 1;
+
+                            for (String num : gameToExport.games[i]) {
+                                if (num.equals("|")) {
+                                    if (currentColumn.length() > 0) {
+                                        columns.add("Coluna " + columnCount + ": " + currentColumn.toString().trim());
+                                        columnCount++;
+                                        currentColumn = new StringBuilder();
+                                    }
+                                } else {
+                                    currentColumn.append(num).append(" ");
+                                }
+                            }
+                            if (currentColumn.length() > 0) {
+                                columns.add("Coluna " + columnCount + ": " + currentColumn.toString().trim());
+                            }
+                            document.add(new Paragraph(String.join("\n", columns)));
+                        } else {
+                            document.add(new Paragraph(String.join(", ", gameToExport.games[i])));
+                        }
+
+                        // Add trevos for +Milionária
+                        if (gameToExport.gameMode.name.equals("+Milionária") && gameToExport.maisMilionaria.trevos != null) {
+                            document.add(new Paragraph("Trevos: " + String.join(", ", gameToExport.maisMilionaria.trevos[i])));
+                        }
+
+                        // Add month for Dia de Sorte
+                        if (gameToExport.gameMode.name.equals("Dia de Sorte") && gameToExport.diaDeSorte.month != null) {
+                            document.add(new Paragraph("Mês: " + gameToExport.diaDeSorte.month[i]));
+                        }
+                    }
+                }
+            }
+        } catch (FileNotFoundException e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+            stage.getIcons().add(icon);
+            alert.setTitle("Erro");
+            alert.setHeaderText("Erro ao gerar PDF");
+            alert.setContentText("Ocorreu um erro ao tentar gerar o arquivo PDF.");
+            alert.showAndWait();
+        }
+    }
+
     private VBox sideMenu() {
         VBox sideMenu = new VBox();
-        sideMenu.setPrefWidth(width / 6);
+        sideMenu.setPrefWidth(320);
         sideMenu.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
         TabPane sideTabPane = new TabPane();
 
@@ -198,11 +516,460 @@ public class App extends Application {
         gameContent.getChildren().add(labelContainer);
     }
 
-    private void loadGameTab(File gameFile) {
+    private void loadResultTab(File resultFile) {
+        String resultName = resultFile.getName().split("_")[0];
+        if (isTabOpen(resultName)) {
+            return;
+        }
         try {
-            Game loadedGame = Game.loadFromFile(gameFile.getAbsolutePath());
-            Tab gameTab = new Tab(gameFile.getName().replace(".json", ""));
+            loadedResult = Result.loadFromFile(resultFile.getAbsolutePath());
+            Tab resultTab = new Tab(resultFile.getName().split("_")[0] + " | "
+                    + resultFile.getName().split("_")[1].split("-")[2] + "/"
+                    + resultFile.getName().split("_")[1].split("-")[1] + "/"
+                    + resultFile.getName().split("_")[1].split("-")[0] + " | "
+                    + resultFile.getName().split("_")[2].split("-")[0] + ":"
+                    + resultFile.getName().split("_")[2].split("-")[1] + ":"
+                    + resultFile.getName().split("_")[2].split("-")[2].replace(".json", ""));
+            resultTab.setClosable(true);
+            loadedResult = Result.loadFromFile(resultFile.getAbsolutePath());
+            System.out.println("\n=== Result Debug ===");
+            System.out.println("Loaded Result: " + resultFile.getName());
+            System.out.println("Game Mode: " + loadedResult.game.gameMode.name);
+            System.out.println("Champion Numbers: " + Arrays.toString(loadedResult.championNumbers));
+            if (loadedResult.championTrevos != null && loadedResult.championTrevos.length > 0) {
+                System.out.println("Champion Trevos: " + Arrays.toString(loadedResult.championTrevos));
+            }
+            if (loadedResult.luckyMonth != null && !loadedResult.luckyMonth.isEmpty()) {
+                System.out.println("Lucky Month: " + loadedResult.luckyMonth);
+            }
+            System.out.println("================\n");
+
+            // Main container
+            GridPane resultTabPane = new GridPane();
+            resultTabPane.setPrefWidth(width);
+            resultTabPane.setPrefHeight(height);
+            resultTabPane.setMaxHeight(Double.MAX_VALUE);
+
+            // Left side - result content with pagination
+            VBox leftPane = new VBox(5);
+            leftPane.setPrefWidth(width * 0.6);
+            leftPane.setPrefHeight(height);
+            leftPane.setMaxHeight(Double.MAX_VALUE);
+            leftPane.setPadding(new javafx.geometry.Insets(10));
+            leftPane.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+
+            Button warningLabel = new Button("Por favor, selecione uma faixa de premiação");
+            warningLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER; -fx-font-size: 16px;");
+            warningLabel.setPrefWidth(width * 0.6);
+            leftPane.getChildren().add(warningLabel);
+
+            // Right side - combined data and faixas
+            VBox rightPaneData = new VBox(5);
+            rightPaneData.setPrefWidth(width * 0.4);
+            rightPaneData.setPrefHeight(height);
+            rightPaneData.setMaxHeight(Double.MAX_VALUE);
+            rightPaneData.setPadding(new javafx.geometry.Insets(10));
+            rightPaneData.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+
+            // Add champion numbers section
+            Button championNumbersLabel = new Button("Números Premiados");
+            championNumbersLabel.setPrefWidth(width);
+            championNumbersLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+
+            GridPane numbersGridResult = new GridPane();
+            displayChampionNumbers(numbersGridResult, loadedResult);
+
+            rightPaneData.getChildren().addAll(championNumbersLabel, numbersGridResult);
+
+            if (loadedResult.game.gameMode.name.equals("Super Sete")) {
+                // Display Super Sete format
+                for (int col = 0; col < 7; col++) {
+                    Button columnLabel = new Button("C " + (col + 1));
+                    columnLabel.setDisable(true);
+                    columnLabel.setPrefWidth(80);
+                    columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                    numbersGridResult.add(columnLabel, col, 0);
+
+                    Button numberButton = new Button(loadedResult.championNumbers[col]);
+                    numberButton.setPrefWidth(80);
+                    numbersGridResult.add(numberButton, col, 1);
+                }
+            } else {
+                // Display standard format with separators and labels
+                Button numberLabel = new Button("Números");
+                numberLabel.setPrefWidth(width);
+                numberLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+
+                int columns = 5;
+                int rows = (int) Math.ceil((double) loadedResult.championNumbers.length / columns);
+
+                for (int row = 0; row < rows; row++) {
+                    for (int col = 0; col < columns; col++) {
+                        int index = row * columns + col;
+                        if (index < loadedResult.championNumbers.length) {
+                            Button numberButton = new Button(loadedResult.championNumbers[index]);
+                            numberButton.setPrefWidth(40);
+                            numbersGridResult.add(numberButton, col, row);
+                        }
+                    }
+                }
+            }
+            numbersGridResult.setHgap(5);
+            numbersGridResult.setVgap(5);
+
+            // Add special elements if needed (trevos, month)
+            addSpecialElements(rightPaneData, loadedResult);
+
+            // Add separator
+            Separator separator = new Separator();
+            separator.setPrefWidth(width);
+            rightPaneData.getChildren().add(separator);
+
+            // Add faixas section
+            Button faixasLabel = new Button("Faixas de Premiação");
+            faixasLabel.setPrefWidth(width);
+            faixasLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+            rightPaneData.getChildren().add(faixasLabel);
+
+            // Add faixas buttons based on game mode
+            switch (loadedResult.game.gameMode.name) {
+                case "+Milionária":
+                    addFaixaButton(rightPaneData, "Faixa 1 - 6 números + 2 trevos", loadedResult.maisMilionaria.faixa1, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 2 - 6 números + 1 ou 0 trevos", loadedResult.maisMilionaria.faixa2, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 3 - 5 números + 2 trevos", loadedResult.maisMilionaria.faixa3, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 4 - 5 números + 1 ou 0 trevos", loadedResult.maisMilionaria.faixa4, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 5 - 4 números + 2 trevos", loadedResult.maisMilionaria.faixa5, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 6 - 4 números + 1 ou 0 trevos", loadedResult.maisMilionaria.faixa6, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 7 - 3 números + 2 trevos", loadedResult.maisMilionaria.faixa7, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 8 - 3 números + 1 trevo", loadedResult.maisMilionaria.faixa8, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 9 - 2 números + 2 trevos", loadedResult.maisMilionaria.faixa9, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 10 - 2 números + 1 trevo", loadedResult.maisMilionaria.faixa10, leftPane, loadedResult);
+                    break;
+                case "Mega-Sena":
+                    addFaixaButton(rightPaneData, "Faixa 1 - Sena", loadedResult.megaSena.faixa1, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 2 - Quina", loadedResult.megaSena.faixa2, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 3 - Quadra", loadedResult.megaSena.faixa3, leftPane, loadedResult);
+                    break;
+                case "Lotofácil":
+                    addFaixaButton(rightPaneData, "Faixa 1 - 15 acertos", loadedResult.lotoFacil.faixa1, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 2 - 14 acertos", loadedResult.lotoFacil.faixa2, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 3 - 13 acertos", loadedResult.lotoFacil.faixa3, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 4 - 12 acertos", loadedResult.lotoFacil.faixa4, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 5 - 11 acertos", loadedResult.lotoFacil.faixa5, leftPane, loadedResult);
+                    break;
+                case "Quina":
+                    addFaixaButton(rightPaneData, "Faixa 1 - Quina", loadedResult.quina.faixa1, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 2 - Quadra", loadedResult.quina.faixa2, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 3 - Terno", loadedResult.quina.faixa3, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 4 - Duque", loadedResult.quina.faixa4, leftPane, loadedResult);
+                    break;
+                case "Lotomania":
+                    addFaixaButton(rightPaneData, "Faixa 1 - 20 acertos", loadedResult.lotoMania.faixa1, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 2 - 19 acertos", loadedResult.lotoMania.faixa2, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 3 - 18 acertos", loadedResult.lotoMania.faixa3, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 4 - 17 acertos", loadedResult.lotoMania.faixa4, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 5 - 16 acertos", loadedResult.lotoMania.faixa5, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 6 - 15 acertos", loadedResult.lotoMania.faixa6, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 7 - 0 acertos", loadedResult.lotoMania.faixa7, leftPane, loadedResult);
+                    break;
+                case "Dupla Sena":
+                    addFaixaButton(rightPaneData, "Faixa 1 - Sena", loadedResult.duplaSena.faixa1, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 2 - Quina", loadedResult.duplaSena.faixa2, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 3 - Quadra", loadedResult.duplaSena.faixa3, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 4 - Terno", loadedResult.duplaSena.faixa4, leftPane, loadedResult);
+                    break;
+                case "Dia de Sorte":
+                    addFaixaButton(rightPaneData, "Faixa 1 - 7 acertos + Mês", loadedResult.diaDeSorte.faixa1, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 2 - 6 acertos + Mês", loadedResult.diaDeSorte.faixa2, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 3 - 5 acertos + Mês", loadedResult.diaDeSorte.faixa3, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 4 - 4 acertos + Mês", loadedResult.diaDeSorte.faixa4, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 5 - Mês", loadedResult.diaDeSorte.faixa5, leftPane, loadedResult);
+                    break;
+                case "Super Sete":
+                    addFaixaButton(rightPaneData, "Faixa 1 - 7 colunas", loadedResult.superSete.faixa1, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 2 - 6 colunas", loadedResult.superSete.faixa2, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 3 - 5 colunas", loadedResult.superSete.faixa3, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 4 - 4 colunas", loadedResult.superSete.faixa4, leftPane, loadedResult);
+                    addFaixaButton(rightPaneData, "Faixa 5 - 3 colunas", loadedResult.superSete.faixa5, leftPane, loadedResult);
+                    break;
+            }
+
+            // Configure ScrollPanes
+            ScrollPane leftScroll = new ScrollPane(leftPane);
+            ScrollPane rightScroll = new ScrollPane(rightPane);
+            rightScroll.setContent(rightPaneData);
+
+            configureScrollPane(leftScroll);
+            configureScrollPane(rightScroll);
+
+            // Add to main container
+            resultTabPane.add(leftScroll, 0, 0);
+            resultTabPane.add(rightScroll, 1, 0);
+
+            setGridConstraints(resultTabPane);
+
+            resultTab.setContent(resultTabPane);
+            mainTabPane.getTabs().add(resultTab);
+            mainTabPane.getSelectionModel().select(resultTab);
+
+        } catch (Exception e) {
+            System.err.println("Error loading result: " + e.getMessage());
+        }
+    }
+
+    private void displayChampionNumbers(GridPane grid, Result loadedResult) {
+        if (loadedResult.game.gameMode.name.equals("Super Sete")) {
+            // Keep Super Sete format unchanged
+            for (int col = 0; col < 7; col++) {
+                Button columnLabel = new Button("C " + (col + 1));
+                columnLabel.setDisable(true);
+                columnLabel.setPrefWidth(80);
+                columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                grid.add(columnLabel, col, 0);
+
+                Button numberButton = new Button(loadedResult.championNumbers[col]);
+                numberButton.setPrefWidth(80);
+                grid.add(numberButton, col, 1);
+            }
+        } else {
+            // Display standard format in 5 columns
+            for (int i = 0; i < loadedResult.championNumbers.length; i++) {
+                Button numberButton = new Button(loadedResult.championNumbers[i]);
+                numberButton.setPrefWidth(40);
+                grid.add(numberButton, i % 5, i / 5);  // Changed from 10 to 5 columns
+            }
+        }
+        grid.setHgap(5);
+        grid.setVgap(5);
+    }
+
+    // Then modify the addFaixaButton method to clear the warning when a faixa is selected
+    private void addFaixaButton(VBox container, String faixaName, Object faixaData, VBox leftPane, Result result) {
+        HBox faixaBox = new HBox(5); // Create HBox to hold both buttons
+
+        Button faixaButton = new Button(faixaName);
+        faixaButton.setPrefWidth(width);
+
+        // Create count button
+        Button countButton = new Button();
+        countButton.setPrefWidth(width - 100); // Adjust width to make room for count
+        countButton.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER; ");
+
+        // Set count based on faixaData type
+        if (faixaData instanceof Result.MMilionaria[]) {
+            countButton.setText(((Result.MMilionaria[]) faixaData).length + " jogos");
+        } else if (faixaData instanceof Result.BaseGame[]) {
+            countButton.setText(((Result.BaseGame[]) faixaData).length + " jogos");
+        } else if (faixaData instanceof Result.DSorte[]) {
+            countButton.setText(((Result.DSorte[]) faixaData).length + " jogos");
+        }
+
+        faixaButton.setOnAction(e -> {
+            leftPane.getChildren().clear();
+            leftPane.setId(faixaName);
+            displayWinningGames(leftPane, faixaData, result);
+        });
+
+        faixaBox.getChildren().addAll(faixaButton, countButton);
+        container.getChildren().add(faixaBox);
+    }
+
+    private void displayWinningGames(VBox container, Object faixaData, Result result) {
+        Button titleLabel = new Button("Jogos Premiados");
+        titleLabel.setPrefWidth(width);
+        titleLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+
+        Button currentFaixaLabel = new Button("Faixa Atual: " + container.getId());
+        currentFaixaLabel.setPrefWidth(width);
+        currentFaixaLabel.setStyle("-fx-background-color: #e0e0e0; -fx-alignment: CENTER;");
+
+        container.getChildren().addAll(titleLabel, currentFaixaLabel);
+
+        VBox gamesContainer = new VBox(10);
+        gamesContainer.setPadding(new javafx.geometry.Insets(5));
+
+        int gameNumber = 1;
+
+        if (faixaData instanceof Result.MMilionaria[]) {
+            Result.MMilionaria[] games = (Result.MMilionaria[]) faixaData;
+            for (Result.MMilionaria game : games) {
+                VBox gameBox = new VBox(5);
+                gameBox.setStyle("-fx-background-color: white; -fx-padding: 5; -fx-border-color: #cccccc; -fx-border-radius: 5;");
+
+                Button gameNumberLabel = new Button("Jogo " + gameNumber++);
+                gameNumberLabel.setPrefWidth(width - 20);
+                gameNumberLabel.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #212529; -fx-font-weight: bold;");
+
+                GridPane numbersGrids = new GridPane();
+                numbersGrids.setHgap(2);
+                numbersGrids.setVgap(2);
+
+                // Add numbers with color highlighting
+                for (int i = 0; i < game.numbers.length; i++) {
+                    Button numButton = new Button(game.numbers[i]);
+                    numButton.setPrefWidth(40);
+                    // Highlight if number matches champion number
+                    if (Arrays.asList(result.championNumbers).contains(game.numbers[i])) {
+                        numButton.setStyle("-fx-background-color: #90EE90;");
+                    }
+                    numbersGrids.add(numButton, i % 10, i / 10);
+                }
+
+                // Add trevos with color highlighting
+                GridPane trevosGrid = new GridPane();
+                trevosGrid.setHgap(2);
+                for (int i = 0; i < game.trevos.length; i++) {
+                    Button trevoButton = new Button(game.trevos[i]);
+                    trevoButton.setPrefWidth(40);
+                    // Highlight if trevo matches champion trevo
+                    if (Arrays.asList(result.championTrevos).contains(game.trevos[i])) {
+                        trevoButton.setStyle("-fx-background-color: #90EE90;");
+                    }
+                    trevosGrid.add(trevoButton, i, 0);
+                }
+
+                gameBox.getChildren().addAll(gameNumberLabel, numbersGrids, trevosGrid);
+                gamesContainer.getChildren().add(gameBox);
+            }
+        } else if (faixaData instanceof Result.BaseGame[]) {
+            Result.BaseGame[] games = (Result.BaseGame[]) faixaData;
+            for (Result.BaseGame game : games) {
+                VBox gameBox = new VBox(5);
+                gameBox.setStyle("-fx-background-color: white; -fx-padding: 5; -fx-border-color: #cccccc; -fx-border-radius: 5;");
+
+                Button gameNumberLabel = new Button("Jogo " + gameNumber++);
+                gameNumberLabel.setPrefWidth(width - 20);
+                gameNumberLabel.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #212529; -fx-font-weight: bold;");
+
+                GridPane numbersGrids = new GridPane();
+                numbersGrids.setHgap(2);
+                numbersGrids.setVgap(2);
+
+                for (int i = 0; i < game.numbers.length; i++) {
+                    Button numButton = new Button(game.numbers[i]);
+                    numButton.setPrefWidth(40);
+                    // Highlight if number matches champion number
+                    if (Arrays.asList(result.championNumbers).contains(game.numbers[i])) {
+                        numButton.setStyle("-fx-background-color: #90EE90;");
+                    }
+                    numbersGrids.add(numButton, i % 10, i / 10);
+                }
+
+                gameBox.getChildren().addAll(gameNumberLabel, numbersGrids);
+                gamesContainer.getChildren().add(gameBox);
+            }
+        } else if (faixaData instanceof Result.DSorte[]) {
+            Result.DSorte[] games = (Result.DSorte[]) faixaData;
+            for (Result.DSorte game : games) {
+                VBox gameBox = new VBox(5);
+                gameBox.setStyle("-fx-background-color: white; -fx-padding: 5; -fx-border-color: #cccccc; -fx-border-radius: 5;");
+
+                Button gameNumberLabel = new Button("Jogo " + gameNumber++);
+                gameNumberLabel.setPrefWidth(width - 20);
+                gameNumberLabel.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #212529; -fx-font-weight: bold;");
+
+                GridPane numbersGrids = new GridPane();
+                numbersGrids.setHgap(2);
+                numbersGrids.setVgap(2);
+
+                for (int i = 0; i < game.numbers.length; i++) {
+                    Button numButton = new Button(game.numbers[i]);
+                    numButton.setPrefWidth(40);
+                    // Highlight if number matches champion number
+                    if (Arrays.asList(result.championNumbers).contains(game.numbers[i])) {
+                        numButton.setStyle("-fx-background-color: #90EE90;");
+                    }
+                    numbersGrids.add(numButton, i % 10, i / 10);
+                }
+
+                // Add month with color highlighting
+                Button monthButton = new Button(game.month);
+                monthButton.setPrefWidth(80);
+                // Highlight if month matches lucky month
+                if (game.month.equals(result.luckyMonth)) {
+                    monthButton.setStyle("-fx-background-color: #90EE90;");
+                }
+
+                gameBox.getChildren().addAll(gameNumberLabel, numbersGrids, monthButton);
+                gamesContainer.getChildren().add(gameBox);
+            }
+        }
+
+        container.getChildren().add(gamesContainer);
+    }
+
+    private void setGridConstraints(GridPane gridPane) {
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setPercentWidth(60);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setPercentWidth(40);
+        gridPane.getColumnConstraints().addAll(col1, col2);
+
+        RowConstraints row = new RowConstraints();
+        row.setVgrow(Priority.ALWAYS);
+        gridPane.getRowConstraints().add(row);
+    }
+
+    private void configureScrollPane(ScrollPane scrollPane) {
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+        scrollPane.setPrefViewportHeight(height);
+        scrollPane.setMaxHeight(Double.MAX_VALUE);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+    }
+
+    private void addSpecialElements(VBox content, Result loadedResult) {
+        if (loadedResult.game.gameMode.name.equals("+Milionária") && loadedResult.championTrevos != null && loadedResult.championTrevos.length > 0) {
+            Button trevosLabel = new Button("Trevos Sorteados:");
+            trevosLabel.setPrefWidth(width);
+            trevosLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+            content.getChildren().add(trevosLabel);
+
+            GridPane trevosGrid = new GridPane();
+            trevosGrid.setHgap(5);
+            trevosGrid.setVgap(5);
+            for (int i = 0; i < loadedResult.championTrevos.length; i++) {
+                Button trevoButton = new Button(loadedResult.championTrevos[i]);
+                trevoButton.setPrefWidth(40);
+                trevosGrid.add(trevoButton, i, 0);
+            }
+            content.getChildren().add(trevosGrid);
+        }
+
+        if (loadedResult.game.gameMode.name.equals("Dia de Sorte") && loadedResult.luckyMonth != null) {
+            Button monthLabel = new Button("Mês Sorteado:");
+            monthLabel.setPrefWidth(width);
+            monthLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+            content.getChildren().add(monthLabel);
+
+            Button monthButton = new Button(loadedResult.luckyMonth);
+            monthButton.setPrefWidth(100);
+            content.getChildren().add(monthButton);
+        }
+    }
+
+    private void loadGameTab(File gameFile) {
+        String gameName = gameFile.getName().split("_")[0];
+        if (isTabOpen(gameName)) {
+            return;
+        }
+        try {
+            loadedGame = Game.loadFromFile(gameFile.getAbsolutePath());
+            Tab gameTab = new Tab(gameFile.getName().split("_")[0] + " | "
+                    + gameFile.getName().split("_")[1].split("-")[2] + "/"
+                    + gameFile.getName().split("_")[1].split("-")[1] + "/"
+                    + gameFile.getName().split("_")[1].split("-")[0] + " | "
+                    + gameFile.getName().split("_")[2].split("-")[0] + ":"
+                    + gameFile.getName().split("_")[2].split("-")[1] + ":"
+                    + gameFile.getName().split("_")[2].split("-")[2].replace(".json", ""));
             gameTab.setClosable(true);
+            loadedGame = Game.loadFromFile(gameFile.getAbsolutePath());
+            System.out.println("\n=== Game Debug ===");
+            System.out.println("Loaded Game: " + gameFile.getName());
+            System.out.println("Game Mode: " + loadedGame.gameMode.name);
+            System.out.println("Number of Games: " + loadedGame.games.length);
+            System.out.println("================\n");
 
             // Main container
             GridPane gameTabPane = new GridPane();
@@ -489,31 +1256,79 @@ public class App extends Application {
     private void refreshGameList(VBox buttonsContainer) {
         Platform.runLater(() -> {
             buttonsContainer.getChildren().clear();
+            buttonsContainer.setSpacing(10);
+            buttonsContainer.setPadding(new javafx.geometry.Insets(5));
+
             File gamesFolder = new File(SRC_FOLDER_PATH_GAMES);
             File[] gameFiles = gamesFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
 
             if (gameFiles != null) {
                 for (File gameFile : gameFiles) {
                     VBox gameRow = new VBox(5);
-                    // Remover a extensão .json do nome
-                    Button gameButton = new Button(gameFile.getName().replace(".json", ""));
-                    gameButton.setPrefWidth(width / 6 - 26);
+                    gameRow.setStyle("-fx-background-color: white; -fx-padding: 5; -fx-border-color: #cccccc; -fx-border-radius: 5;");
+
+                    // Main game button with improved styling
+                    Button gameButton = new Button(
+                            gameFile.getName().split("_")[0] + " | "
+                            + gameFile.getName().split("_")[1].split("-")[2] + "/"
+                            + gameFile.getName().split("_")[1].split("-")[1] + "/"
+                            + gameFile.getName().split("_")[1].split("-")[0] + " | "
+                            + gameFile.getName().split("_")[2].split("-")[0] + ":"
+                            + gameFile.getName().split("_")[2].split("-")[1] + ":"
+                            + gameFile.getName().split("_")[2].split("-")[2].replace(".json", ""));
+                    gameButton.setPrefWidth(275);
+                    gameButton.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #212529; -fx-font-weight: bold;");
                     gameButton.setOnAction(e -> loadGameTab(gameFile));
 
-                    // Botão Deletar existente
+                    // Action buttons container
+                    HBox buttonBox = new HBox(5);
+                    buttonBox.setPrefWidth(275);
+                    buttonBox.setAlignment(Pos.CENTER);
+
+                    // Delete button with red styling
                     Button deleteButton = new Button("Deletar");
+                    deleteButton.setPrefWidth(75);
+                    deleteButton.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
                     deleteButton.setOnAction(e -> deleteGame(gameFile, buttonsContainer));
 
-                    // Novo botão Copiar
-                    Button copyButton = new Button("Copiar Configuração");
-                    copyButton.setOnAction(e -> {
-                        copyGameConfiguration(gameFile);
+                    // Copy button with blue styling
+                    Button copyButton = new Button("Copiar");
+                    copyButton.setPrefWidth(75);
+                    copyButton.setStyle("-fx-background-color: #0d6efd; -fx-text-fill: white;");
+                    copyButton.setOnAction(e -> copyGameConfiguration(gameFile));
+
+                    Button exportButton = new Button("Exportar PDF");
+                    exportButton.setPrefWidth(125);
+                    exportButton.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;");
+                    exportButton.setOnAction(e -> {
+                        try {
+                            Game gameToExport = Game.loadFromFile(gameFile.getAbsolutePath());
+                            exportGameToPDF(gameToExport);
+                        } catch (Exception ex) {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+                            stage.getIcons().add(icon);
+                            alert.setTitle("Erro");
+                            alert.setHeaderText("Erro ao exportar jogo");
+                            alert.setContentText("Ocorreu um erro ao tentar exportar o jogo para PDF.");
+                            alert.showAndWait();
+                        }
                     });
 
-                    // Adicionar os botões ao layout
-                    HBox buttonBox = new HBox(5);
-                    buttonBox.getChildren().addAll(deleteButton, copyButton);
+                    // Add hover effects
+                    gameButton.setOnMouseEntered(e -> gameButton.setStyle("-fx-background-color: #e9ecef; -fx-text-fill: #212529; -fx-font-weight: bold;"));
+                    gameButton.setOnMouseExited(e -> gameButton.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #212529; -fx-font-weight: bold;"));
 
+                    deleteButton.setOnMouseEntered(e -> deleteButton.setStyle("-fx-background-color: #bb2d3b; -fx-text-fill: white;"));
+                    deleteButton.setOnMouseExited(e -> deleteButton.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;"));
+
+                    copyButton.setOnMouseEntered(e -> copyButton.setStyle("-fx-background-color: #0b5ed7; -fx-text-fill: white;"));
+                    copyButton.setOnMouseExited(e -> copyButton.setStyle("-fx-background-color: #0d6efd; -fx-text-fill: white;"));
+
+                    exportButton.setOnMouseEntered(e -> exportButton.setStyle("-fx-background-color: #218838; -fx-text-fill: white;"));
+                    exportButton.setOnMouseExited(e -> exportButton.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;"));
+
+                    buttonBox.getChildren().addAll(deleteButton, copyButton, exportButton);
                     gameRow.getChildren().addAll(gameButton, buttonBox);
                     buttonsContainer.getChildren().add(gameRow);
                 }
@@ -561,12 +1376,213 @@ public class App extends Application {
         scrollPaneGenResults.setPrefHeight(height);
         scrollPaneGenResults.setPadding(new javafx.geometry.Insets(5));
         scrollPaneGenResults.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+
+        // Initialize the class-level container
+        resultsButtonsContainer = new VBox(10);
+        refreshResultsList(resultsButtonsContainer);
+
+        scrollPaneGenResults.setContent(resultsButtonsContainer);
         tabGenResults.setContent(scrollPaneGenResults);
         tabGenResults.setClosable(false);
     }
 
+    private void updateResultsList(VBox buttonsContainer) {
+        buttonsContainer.getChildren().clear();
+        buttonsContainer.setSpacing(10);
+        buttonsContainer.setPadding(new javafx.geometry.Insets(5));
+
+        File resultsFolder = new File(SRC_FOLDER_PATH_RESULTS);
+        File[] resultFiles = resultsFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
+
+        if (resultFiles != null) {
+            for (File resultFile : resultFiles) {
+                try {
+                    Result localResult = Result.loadFromFile(resultFile.getAbsolutePath());
+                    System.out.println("\n=== Result File Debug ===");
+                    System.out.println("File: " + resultFile.getName());
+
+                    // Check champion numbers
+                    if (localResult.championNumbers != null) {
+                        System.out.println("Champion Numbers: " + Arrays.toString(localResult.championNumbers));
+                    } else {
+                        System.out.println("ERROR: Champion Numbers are null");
+                    }
+
+                    // Check trevos if present
+                    if (localResult.championTrevos != null && localResult.championTrevos.length > 0) {
+                        System.out.println("Champion Trevos: " + Arrays.toString(localResult.championTrevos));
+                    } else if (localResult.game.gameMode.name.equals("+Milionária")) {
+                        System.out.println("ERROR: Champion Trevos missing for +Milionária result");
+                    }
+
+                    // Check lucky month if present
+                    if (localResult.luckyMonth != null && !localResult.luckyMonth.isEmpty()) {
+                        System.out.println("Lucky Month: " + localResult.luckyMonth);
+                    } else if (localResult.game.gameMode.name.equals("Dia de Sorte")) {
+                        System.out.println("ERROR: Lucky Month missing for Dia de Sorte result");
+                    }
+
+                    System.out.println("======================\n");
+                } catch (Exception e) {
+                    System.err.println("Error loading result file: " + resultFile.getName());
+                    System.err.println("Error type: " + e.getClass().getSimpleName());
+                    System.err.println("Error message: " + e.getMessage());
+                    if (e.getCause() != null) {
+                        System.err.println("Caused by: " + e.getCause().getMessage());
+                    }
+                }
+
+                VBox resultRow = new VBox(5);
+                resultRow.setStyle("-fx-background-color: white; -fx-padding: 5; -fx-border-color: #cccccc; -fx-border-radius: 5;");
+
+                Button resultButton = new Button(
+                        resultFile.getName().split("_")[0] + " | "
+                        + resultFile.getName().split("_")[1].split("-")[2] + "/"
+                        + resultFile.getName().split("_")[1].split("-")[1] + "/"
+                        + resultFile.getName().split("_")[1].split("-")[0] + " | "
+                        + resultFile.getName().split("_")[2].split("-")[0] + ":"
+                        + resultFile.getName().split("_")[2].split("-")[1] + ":"
+                        + resultFile.getName().split("_")[2].split("-")[2].replace(".json", ""));
+                resultButton.setPrefWidth(275);
+                resultButton.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #212529; -fx-font-weight: bold;");
+                resultButton.setOnAction(e -> loadResultTab(resultFile));
+
+                HBox buttonBox = new HBox(5);
+                buttonBox.setPrefWidth(275);
+                buttonBox.setAlignment(Pos.CENTER);
+
+                Button deleteButton = new Button("Deletar");
+                deleteButton.setPrefWidth(100);
+                deleteButton.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
+                deleteButton.setOnAction(e -> deleteResult(resultFile, buttonsContainer));
+
+                Button exportButton = new Button("Exportar PDF");
+                exportButton.setPrefWidth(175);
+                exportButton.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;");
+
+                // Add hover effects
+                resultButton.setOnMouseEntered(e -> resultButton.setStyle("-fx-background-color: #e9ecef; -fx-text-fill: #212529; -fx-font-weight: bold;"));
+                resultButton.setOnMouseExited(e -> resultButton.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #212529; -fx-font-weight: bold;"));
+
+                deleteButton.setOnMouseEntered(e -> deleteButton.setStyle("-fx-background-color: #bb2d3b; -fx-text-fill: white;"));
+                deleteButton.setOnMouseExited(e -> deleteButton.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;"));
+
+                exportButton.setOnMouseEntered(e -> exportButton.setStyle("-fx-background-color: #218838; -fx-text-fill: white;"));
+                exportButton.setOnMouseExited(e -> exportButton.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;"));
+
+                buttonBox.getChildren().addAll(deleteButton, exportButton);
+                resultRow.getChildren().addAll(resultButton, buttonBox);
+                buttonsContainer.getChildren().add(resultRow);
+            }
+        }
+    }
+
+    private void refreshResultsList(VBox buttonsContainer) {
+        Platform.runLater(() -> {
+            updateResultsList(buttonsContainer);
+            buttonsContainer.getChildren().clear();
+            buttonsContainer.setSpacing(10);
+            buttonsContainer.setPadding(new javafx.geometry.Insets(5));
+
+            File resultsFolder = new File(SRC_FOLDER_PATH_RESULTS);
+            File[] resultFiles = resultsFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
+
+            if (resultFiles != null) {
+                for (File resultFile : resultFiles) {
+                    try {
+                        // Load and debug the result file
+                        Result localResult = Result.loadFromFile(resultFile.getAbsolutePath());
+                        System.out.println("\n=== Result File Debug ===");
+                        System.out.println("File: " + resultFile.getName());
+                        System.out.println("Champion Numbers: " + Arrays.toString(localResult.championNumbers));
+                        if (localResult.championTrevos != null && localResult.championTrevos.length > 0) {
+                            System.out.println("Champion Trevos: " + Arrays.toString(localResult.championTrevos));
+                        }
+                        if (localResult.luckyMonth != null && !localResult.luckyMonth.isEmpty()) {
+                            System.out.println("Lucky Month: " + localResult.luckyMonth);
+                        }
+                        System.out.println("======================\n");
+                    } catch (Exception e) {
+                        System.err.println("Error loading result file: " + resultFile.getName());
+                    }
+
+                    VBox resultRow = new VBox(5);
+                    resultRow.setStyle("-fx-background-color: white; -fx-padding: 5; -fx-border-color: #cccccc; -fx-border-radius: 5;");
+
+                    Button resultButton = new Button(
+                            resultFile.getName().split("_")[0] + " | "
+                            + resultFile.getName().split("_")[1].split("-")[2] + "/"
+                            + resultFile.getName().split("_")[1].split("-")[1] + "/"
+                            + resultFile.getName().split("_")[1].split("-")[0] + " | "
+                            + resultFile.getName().split("_")[2].split("-")[0] + ":"
+                            + resultFile.getName().split("_")[2].split("-")[1] + ":"
+                            + resultFile.getName().split("_")[2].split("-")[2].replace(".json", ""));
+                    resultButton.setPrefWidth(275);
+                    resultButton.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #212529; -fx-font-weight: bold;");
+                    resultButton.setOnAction(e -> loadResultTab(resultFile));
+
+                    HBox buttonBox = new HBox(5);
+                    buttonBox.setPrefWidth(275);
+                    buttonBox.setAlignment(Pos.CENTER);
+
+                    Button deleteButton = new Button("Deletar");
+                    deleteButton.setPrefWidth(100);
+                    deleteButton.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
+                    deleteButton.setOnAction(e -> deleteResult(resultFile, buttonsContainer));
+
+                    Button exportButton = new Button("Exportar PDF");
+                    exportButton.setPrefWidth(175);
+                    exportButton.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;");
+                    exportButton.setOnAction(e -> {
+                        try {
+                            Result resultToExport = Result.loadFromFile(resultFile.getAbsolutePath());
+                            exportResultToPDF(resultToExport);
+                        } catch (Exception ex) {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+                            stage.getIcons().add(icon);
+                            alert.setTitle("Erro");
+                            alert.setHeaderText("Erro ao exportar resultado");
+                            alert.setContentText("Ocorreu um erro ao tentar exportar o resultado para PDF.");
+                            alert.showAndWait();
+                        }
+                    });
+
+                    // Add hover effects
+                    resultButton.setOnMouseEntered(e -> resultButton.setStyle("-fx-background-color: #e9ecef; -fx-text-fill: #212529; -fx-font-weight: bold;"));
+                    resultButton.setOnMouseExited(e -> resultButton.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #212529; -fx-font-weight: bold;"));
+
+                    deleteButton.setOnMouseEntered(e -> deleteButton.setStyle("-fx-background-color: #bb2d3b; -fx-text-fill: white;"));
+                    deleteButton.setOnMouseExited(e -> deleteButton.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;"));
+
+                    exportButton.setOnMouseEntered(e -> exportButton.setStyle("-fx-background-color: #218838; -fx-text-fill: white;"));
+                    exportButton.setOnMouseExited(e -> exportButton.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;"));
+
+                    buttonBox.getChildren().addAll(deleteButton, exportButton);
+                    resultRow.getChildren().addAll(resultButton, buttonBox);
+                    buttonsContainer.getChildren().add(resultRow);
+                }
+            }
+        });
+    }
+
+    private void deleteResult(File resultFile, VBox buttonsContainer) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+        stage.getIcons().add(icon);
+        alert.setTitle("Deletar Resultado");
+        alert.setHeaderText("Você tem certeza que deseja deletar este resultado?");
+        alert.setContentText("Esta ação não pode ser desfeita.");
+
+        if (alert.showAndWait().get() == ButtonType.OK && resultFile.delete()) {
+            refreshResultsList(buttonsContainer);
+        } else {
+            System.err.println("Falha ao deletar o arquivo do resultado.");
+        }
+    }
+
     private void updateGameNumbers(ChoiceBox<String> choiceBox) {
-        gameNumbers.getChildren().clear();  // Clear existing buttons first
+        genGameNumbers.getChildren().clear();  // Clear existing buttons first
 
         int selectedIndex = choiceBox.getSelectionModel().getSelectedIndex();
         List<Button> buttons = numbersButtons(gameModes[selectedIndex]);
@@ -580,10 +1596,10 @@ public class App extends Application {
             // Assign an ID to the button
             button.setId("numberButton" + i);
 
-            gameNumbers.add(button, col, row);
+            genGameNumbers.add(button, col, row);
         }
-        gameNumbers.setHgap(5);
-        gameNumbers.setVgap(5);
+        genGameNumbers.setHgap(5);
+        genGameNumbers.setVgap(5);
     }
 
     private ChoiceBox<String> numberAmount(GameMode gameMode) {
@@ -599,7 +1615,9 @@ public class App extends Application {
 
         // Add listener to update currentNumberAmountValue
         numberAmount.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            currentNumberAmountValue = Integer.parseInt(newValue.split(" ")[0]);
+            if (newValue != null) {
+                currentNumberAmountValue = Integer.parseInt(newValue.split(" ")[0]);
+            }
         });
 
         return numberAmount;
@@ -652,19 +1670,29 @@ public class App extends Application {
         return buttonList;
     }
 
+    private boolean isTabOpen(String tabName) {
+        for (Tab tab : mainTabPane.getTabs()) {
+            if (tab.getText().startsWith(tabName)) {
+                mainTabPane.getSelectionModel().select(tab);
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void openTab(String tabName) {
         // Check if the tab already exists
         for (Tab tab : mainTabPane.getTabs()) {
             if (tab.getText().equals(tabName)) {
-                // Select the existing tab
+                // Select the existing tab and return immediately
                 mainTabPane.getSelectionModel().select(tab);
                 return;
             }
         }
 
-        // Create a new tab if it doesn't exist
+        // Create a new tab since it doesn't exist
         Tab newTab = new Tab(tabName);
-        newTab.setClosable(true); // Allow the tab to be closed by the user
+        newTab.setClosable(false); // Prevent the tab from being closed
 
         // Set the content of the tab based on the tabName
         switch (tabName) {
@@ -675,7 +1703,6 @@ public class App extends Application {
                 newTab.setContent(GenResult());
                 break;
             default:
-                // Default content if tabName doesn't match any case
                 newTab.setContent(new VBox());
                 break;
         }
@@ -750,7 +1777,7 @@ public class App extends Application {
         gameModeBox.getChildren().addAll(choiceBox, numberAmount);
 
         // Initialize gameNumbers
-        gameNumbers = new GridPane();
+        genGameNumbers = new GridPane();
         updateGameNumbers(choiceBox);
 
         // Initialize trevos
@@ -783,16 +1810,21 @@ public class App extends Application {
         choiceBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
             GameMode selectedGameMode = gameModes[newValue.intValue()];
             numberAmount.getItems().clear();
+
+            // Set items first
             for (int i = selectedGameMode.minSelections; i <= selectedGameMode.maxSelections; i++) {
                 numberAmount.getItems().add(i + " Números");
             }
-            numberAmount.setValue(selectedGameMode.minSelections + " Números");
+
+            // Then set the value after items are populated using Platform.runLater
+            Platform.runLater(() -> {
+                numberAmount.setValue(selectedGameMode.minSelections + " Números");
+            });
 
             // Update the gameNumbers and other UI elements
             updateGameNumbers(choiceBox);
             updateTrevos(choiceBox, trevos);
             updateMonths(choiceBox, monthsButtons);
-            numberAmount.setValue(selectedGameMode.minSelections + " Números");
         });
 
         generateButton.setOnAction(event -> {
@@ -816,7 +1848,9 @@ public class App extends Application {
                     int trevoAmountValue = 0;
                     if (selectedIndex == 0 && trevoAmount.getValue() != null) {
                         String selectedTrevoAmount = trevoAmount.getValue();
-                        trevoAmountValue = Integer.parseInt(selectedTrevoAmount.split(" ")[0]);
+                        if (gameModes[selectedIndex].name.equals("+Milionária")) {
+                            trevoAmountValue = Integer.parseInt(selectedTrevoAmount.split(" ")[0]);
+                        }
                     }
 
                     // Get the number of games to generate
@@ -925,7 +1959,7 @@ public class App extends Application {
         Label label2 = new Label("Editar Numeros:");
         label2.setFont(new Font(14));
 
-        leftPane.getChildren().addAll(label1, gameModeBox, label2, gameNumbers);
+        leftPane.getChildren().addAll(label1, gameModeBox, label2, genGameNumbers);
         if (choiceBox.getSelectionModel().getSelectedIndex() == 0) {
             leftPane.getChildren().addAll(trevoLabel, trevoAmountBox);
         }
@@ -942,8 +1976,8 @@ public class App extends Application {
     private void copyGameConfiguration(File gameFile) {
         try {
             // Carregar o jogo do arquivo
-            Game loadedGame = Game.loadFromFile(gameFile.getAbsolutePath());
-            GameMode loadedGameMode = loadedGame.gameMode;
+            Game loadedGameFile = Game.loadFromFile(gameFile.getAbsolutePath());
+            GameMode loadedGameMode = loadedGameFile.gameMode;
 
             // Atualizar o gameMode atual
             currentGameMode = loadedGameMode;
@@ -1283,11 +2317,11 @@ public class App extends Application {
     private void addGame(GridPane gridPane, List<Button> buttons) {
         int currentCol = 0;
         int currentRow = 0;
-        int columns = 10; // Number of desired columns
+        // Set columns to 4 for Dia de Sorte months, otherwise use 10
+        int columns = buttons.get(0).getText().matches("Janeiro|Fevereiro|Março|Abril|Maio|Junho|Julho|Agosto|Setembro|Outubro|Novembro|Dezembro") ? 4 : 10;
 
         for (Button button : buttons) {
             if (button.getText().startsWith("Coluna")) {
-                // If the button is a column header, start a new row
                 currentCol = 0;
                 currentRow++;
                 gridPane.add(button, currentCol, currentRow);
@@ -1296,7 +2330,6 @@ public class App extends Application {
                 gridPane.add(button, currentCol, currentRow);
                 currentCol++;
 
-                // If we reach the end of a row, reset column and move to next row
                 if (currentCol >= columns) {
                     currentCol = 0;
                     currentRow++;
@@ -1304,7 +2337,6 @@ public class App extends Application {
             }
         }
 
-        // Set spacing and visibility
         gridPane.setHgap(5);
         gridPane.setVgap(5);
         gridPane.setVisible(true);
@@ -1378,19 +2410,728 @@ public class App extends Application {
         return buttonList;
     }
 
-    private VBox GenResult() {
-        VBox homeTab = new VBox();
-        homeTab.setBackground(new Background(new BackgroundFill(Color.BLUE, null, null)));
+    private GridPane GenResult() {
+        GridPane gridPane = new GridPane();
+        gridPane.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+        gridPane.setPrefWidth(width);
+        gridPane.setPrefHeight(height);
 
-        // Add your content here
-        return homeTab;
+        // Left side - game content
+        VBox leftPane = new VBox(5); // Increased spacing
+        leftPane.setPrefWidth(width * 0.6);
+        leftPane.setPrefHeight(height);
+        leftPane.setMaxHeight(Double.MAX_VALUE);
+        leftPane.setPadding(new javafx.geometry.Insets(5)); // Increased padding
+        leftPane.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+
+        // Right side
+        rightPane = new VBox(5);
+        rightPane.setPrefWidth(width * 0.4);
+        rightPane.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+
+        ChoiceBox<String> gameChoice = gameChoice();
+        gameChoice.setPrefWidth(300);
+
+        // Inside the GenResult() method, after initializing rightPane:
+        rightPane = new VBox(5);
+        rightPane.setPrefWidth(width * 0.4);
+        rightPane.setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+
+        // Add the new button labels
+        HBox resultHeader = new HBox(5);
+        Button numeroPremiadoLabel = new Button("Número Premiado");
+        numeroPremiadoLabel.setPrefWidth(width / 2);
+        numeroPremiadoLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+
+        resultHeader.getChildren().addAll(numeroPremiadoLabel);
+        rightPane.getChildren().add(resultHeader);
+
+        Button specialPremiadoLabel = new Button(""); // Will be updated based on game type
+        specialPremiadoLabel.setPrefWidth(width);
+        specialPremiadoLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+
+        // Create GridPane for numbers
+        numbersGrid = new GridPane();
+        numbersGrid.setHgap(5);
+        numbersGrid.setVgap(5);
+
+        // Create GridPane for special buttons (trevos/month)
+        specialGrid = new GridPane();
+        specialGrid.setHgap(5);
+        specialGrid.setVgap(5);
+
+        gameChoice.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.equals("Escolha um jogo") && !newValue.equals("Jogo não encontrado")) {
+                String gameName = newValue.split(" \\|")[0];
+                for (GameMode mode : gameModes) {
+
+                    if (mode.name.equals(gameName)) {
+                        numbersGrid.getChildren().clear();
+                        specialGrid.getChildren().clear();
+
+                        if (mode.name.equals("Super Sete")) {
+                            // Reset the array with exactly 7 elements for Super Sete
+                            selectedNumbers = new String[7];
+                            Arrays.fill(selectedNumbers, ""); // Initialize with empty strings
+                            for (int col = 0; col < 7; col++) {
+                                // Add column label
+                                Button columnLabel = new Button("C " + (col + 1));
+                                columnLabel.setDisable(true);
+                                columnLabel.setPrefWidth(80);
+                                columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                                numbersGrid.add(columnLabel, col, 0);
+
+                                // Add single number display for each column
+                                Button numberButton = new Button("");
+                                numberButton.setPrefWidth(80);
+                                numbersGrid.add(numberButton, col, 1);
+                            }
+                            updateSuperSeteState(selectedNumbers);
+                        } else {
+                            // Original code for other game modes
+                            for (int i = 0; i < mode.minSelections; i++) {
+                                Button numberButton = new Button(" ");
+                                numberButton.setPrefWidth(40);
+                                numbersGrid.add(numberButton, i % 10, i / 10);
+                            }
+                        }
+
+                        // Handle special buttons
+                        switch (mode.name) {
+                            case "+Milionária":
+                                specialPremiadoLabel.setText("Trevos Premiados");
+                                specialPremiadoLabel.setVisible(true);
+                                // Add trevo buttons based on minTrevos
+                                for (int i = 0; i < mode.maisMilionaria.minTrevos; i++) {
+                                    Button trevoButton = new Button(" ");
+                                    trevoButton.setPrefWidth(40);
+                                    specialGrid.add(trevoButton, i, 0);
+                                }
+                                specialGrid.setVisible(true);
+                                break;
+                            case "Dia de Sorte":
+                                specialPremiadoLabel.setText("Mês Premiado");
+                                specialPremiadoLabel.setVisible(true);
+                                // Add single month button
+                                Button monthButton = new Button("Mês");
+                                monthButton.setPrefWidth(100);
+                                specialGrid.add(monthButton, 0, 0);
+                                specialGrid.setVisible(true);
+                                break;
+                            default:
+                                specialPremiadoLabel.setVisible(false);
+                                specialGrid.setVisible(false);
+                                break;
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+        rightPane.setPadding(new javafx.geometry.Insets(5));
+        rightPane.getChildren().addAll(numeroPremiadoLabel, numbersGrid, specialPremiadoLabel, specialGrid);
+
+        // Initialize trevos GridPane
+        trevos = new GridPane();
+        trevos.setHgap(5);
+        trevos.setVgap(5);
+
+        Button simResult = new Button("Simular Resultado");
+        simResult.setPrefWidth(200);
+
+        simResult.setOnAction(event -> {
+            String selectedGame = gameChoice.getValue();
+            if (selectedGame != null && !selectedGame.equals("Escolha um jogo") && !selectedGame.equals("Jogo não encontrado")) {
+                String gameName = selectedGame.split(" \\|")[0];
+                for (GameMode mode : gameModes) {
+                    if (mode.name.equals(gameName)) {
+                        currentGameMode = mode;
+                        result = new Result();
+                        Game simGame = result.simulateResult(mode);
+
+                        // Update selected values with simulated results
+                        selectedNumbers = simGame.games[0];
+                        if (mode.name.equals("Super Sete")) {
+                            selectedNumbers = Arrays.stream(simGame.games[0])
+                                    .filter(s -> !s.equals("|"))
+                                    .toArray(String[]::new);
+                            updateSuperSeteState(selectedNumbers);
+                        }
+
+                        // Initialize special elements if needed
+                        if (mode.name.equals("+Milionária")) {
+                            selectedTrevos = simGame.maisMilionaria.trevos[0];
+                        } else if (mode.name.equals("Dia de Sorte")) {
+                            luckyMonth = simGame.diaDeSorte.month[0];
+                        }
+
+                        // Update colors in left pane first
+                        updateButtonColors();
+
+                        // Then update displays
+                        if (mode.name.equals("Super Sete")) {
+                            updateSuperSeteState(selectedNumbers);
+                        } else {
+                            updateResultDisplay(selectedNumbers, numbersGrid);
+                        }
+                        if (mode.name.equals("+Milionária")) {
+                            updateTrevoDisplay(selectedTrevos, specialGrid);
+                        } else if (mode.name.equals("Dia de Sorte")) {
+                            updateMonthDisplay(luckyMonth, specialGrid);
+                        }
+
+                        // Update result object
+                        result.championNumbers = selectedNumbers;
+                        result.championTrevos = selectedTrevos;
+                        result.luckyMonth = luckyMonth;
+
+                        debugState();
+                        break;
+                    }
+                }
+            }
+        });
+
+        HBox hboxGen = new HBox(5);
+        hboxGen.getChildren().addAll(gameChoice, simResult);
+
+        genResultNumbers = new GridPane();
+        genResultNumbers.setHgap(5);
+        genResultNumbers.setVgap(5);
+        Button resultLabel = new Button("Escolha um jogo");
+        resultLabel.setPrefWidth(500);
+        resultLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+
+        Button generateResultButton = new Button("Gerar Resultado");
+        generateResultButton.setPrefWidth(505);
+
+        generateResultButton.setOnAction(event -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            Stage stage = (Stage) generateResultButton.getScene().getWindow();
+            alert.initOwner(stage);
+            stage.getIcons().add(icon);
+            alert.setTitle("Confirmar Geração de Resultado");
+            alert.setHeaderText("Deseja realmente gerar o resultado?");
+            alert.setContentText("Ao confirmar, o resultado será gerado e salvo em um arquivo.");
+
+            if (alert.showAndWait().get() == ButtonType.OK) {
+                try {
+                    String selectedGame = gameChoice.getValue();
+                    // Split by pipe character and trim whitespace
+                    String[] mainParts = selectedGame.split("\\|");
+                    String gameName = mainParts[0].trim();
+
+                    // Extract date and time parts more safely
+                    String[] dateAndTime = mainParts[1].trim().split(" ");
+                    String date = dateAndTime[0];
+                    String time = mainParts[2].trim();
+
+                    // Convert display date format (29/10/2024) to filename format (2024-10-29)
+                    String[] dateParts = date.split("/");
+                    String[] timeParts = time.split(":");
+                    String fileDate = dateParts[2] + "-" + dateParts[1] + "-" + dateParts[0];
+                    String fileTime = timeParts[0] + "-" + timeParts[1] + "-" + timeParts[2];
+
+                    Game game = Game.loadFromFile(SRC_FOLDER_PATH_GAMES + gameName + "_" + fileDate + "_" + fileTime + ".json");
+
+                    // Create result directory if it doesn't exist
+                    createDirectoryIfNotExists(SRC_FOLDER_PATH_RESULTS);
+
+                    // Generate current date formatted for the new result file
+                    String generationDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+
+                    // Create the result file name
+                    String resultFileName = gameName + "_" + generationDate + ".json";
+                    String filePath = SRC_FOLDER_PATH_RESULTS + resultFileName;
+
+                    // Create and save the result
+                    Result resultToSave = new Result(game, selectedNumbers, selectedTrevos, luckyMonth);
+
+                    // Create file in path
+                    File file = new File(filePath);
+                    if (file.exists()) {
+                        file.delete();
+                    }
+
+                    resultToSave.saveToFile(filePath);
+                    System.out.println("\nResult saved successfully to: " + filePath);
+                    refreshResultsList(resultsButtonsContainer);
+                } catch (Exception e) {
+                    System.err.println("Error saving result: " + e.getMessage());
+                }
+            }
+        });
+
+        gameChoice.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.equals("Jogo não encontrado")) {
+                String gameName = newValue.split(" \\|")[0];
+                for (GameMode mode : gameModes) {
+                    if (mode.name.equals(gameName)) {
+                        currentGameMode = mode;
+
+                        // Initialize arrays only once with proper size
+                        if (selectedNumbers == null || selectedNumbers.length != mode.minSelections) {
+                            selectedNumbers = mode.name.equals("Super Sete")
+                                    ? new String[7]
+                                    : new String[mode.minSelections];
+                            Arrays.fill(selectedNumbers, "");
+                        }
+
+                        // Initialize special elements only when needed and not already initialized
+                        if (mode.name.equals("+Milionária")) {
+                            if (selectedTrevos == null || selectedTrevos.length != mode.maisMilionaria.minTrevos) {
+                                selectedTrevos = new String[mode.maisMilionaria.minTrevos];
+                                Arrays.fill(selectedTrevos, ""); // Initialize with empty strings
+                            }
+                        } else {
+                            selectedTrevos = new String[0];
+                        }
+
+                        // In the month selection logic, modify the luckyMonth initialization:
+                        if (mode.name.equals("Dia de Sorte")) {
+                            luckyMonth = ""; // Initialize with empty string
+                        }
+                        genResultNumbers.getChildren().clear();
+                        leftPane.getChildren().clear();
+                        leftPane.getChildren().addAll(resultLabel, hboxGen);
+
+                        // Inside the GenResult() method, modify the Super Sete selection logic:
+                        if (mode.name.equals("Super Sete")) {
+
+                            // For Super Sete columns
+                            for (int col = 0; col < 7; col++) {
+                                Button columnLabel = new Button("C " + (col + 1));
+                                columnLabel.setDisable(true);
+                                columnLabel.setPrefWidth(80);
+                                columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                                genResultNumbers.add(columnLabel, col, 0);
+
+                                final int currentCol = col;
+
+                                for (int num = 0; num < 10; num++) {
+                                    Button numberButton = new Button(String.format("%d", num));
+                                    numberButton.setPrefWidth(80);
+
+                                    numberButton.setOnAction(e -> {
+                                        // If clicking the same number that's already selected, clear it
+                                        if (selectedNumbers[currentCol] != null && selectedNumbers[currentCol].equals(numberButton.getText())) {
+                                            selectedNumbers[currentCol] = "";
+                                        } else {
+                                            selectedNumbers[currentCol] = numberButton.getText();
+                                        }
+                                        updateSuperSeteState(selectedNumbers);
+                                        debugState();
+                                    });
+
+                                    genResultNumbers.add(numberButton, col, num + 1);
+                                }
+                            }
+                            leftPane.getChildren().add(genResultNumbers);
+                        } else {
+                            // For regular numbers in non-Super Sete games
+                            List<Button> buttons = numbersButtons(mode);
+                            int columns = 10;
+                            for (int i = 0; i < buttons.size(); i++) {
+                                int row = i / columns;
+                                int col = i % columns;
+                                Button button = buttons.get(i);
+
+                                // Add debug action
+                                button.setOnAction(e -> {
+                                    String number = button.getText();
+                                    List<String> numbersList = new ArrayList<>();
+
+                                    // Build list from existing selected numbers
+                                    for (String n : selectedNumbers) {
+                                        if (n != null && !n.isEmpty()) {
+                                            numbersList.add(n);
+                                        }
+                                    }
+
+                                    // Toggle selection with proper array management
+                                    if (numbersList.contains(number)) {
+                                        numbersList.remove(number);
+                                    } else if (numbersList.size() < currentGameMode.minSelections) {
+                                        numbersList.add(number);
+                                    }
+
+                                    Collections.sort(numbersList);
+                                    Arrays.fill(selectedNumbers, "");
+                                    for (int j = 0; j < numbersList.size(); j++) {
+                                        selectedNumbers[j] = numbersList.get(j);
+                                    }
+                                    updateButtonColors();
+                                    updateResultDisplay(selectedNumbers, numbersGrid);
+                                    if (result == null) {
+                                        result = new Result();
+                                    }
+                                    result.championNumbers = selectedNumbers;
+                                    debugState();
+                                });
+
+                                genResultNumbers.add(button, col, row);
+                            }
+                            genResultNumbers.setHgap(5);
+                            genResultNumbers.setVgap(5);
+                            leftPane.getChildren().add(genResultNumbers);
+                        }
+
+                        // Add special elements (+Milionária and Dia de Sorte)
+                        if (mode.name.equals("+Milionária")) {
+                            Button trevosLabel = new Button("Trevos");
+                            trevosLabel.setPrefWidth(500);
+                            trevosLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+                            GridPane trevosGrid = new GridPane();
+                            // For Trevos (+Milionária)
+                            List<Button> trevosButtons = trevosButtons(mode);
+                            for (Button trevoButton : trevosButtons) {
+                                trevoButton.setOnAction(e -> {
+                                    String trevo = trevoButton.getText();
+                                    List<String> trevosList = new ArrayList<>();
+
+                                    // Build list from existing selected trevos
+                                    for (String t : selectedTrevos) {
+                                        if (t != null && !t.isEmpty()) {
+                                            trevosList.add(t);
+                                        }
+                                    }
+
+                                    // Toggle selection with proper array management
+                                    if (trevosList.contains(trevo)) {
+                                        trevosList.remove(trevo);
+                                    } else if (trevosList.size() < currentGameMode.maisMilionaria.minTrevos) {
+                                        trevosList.add(trevo);
+                                    }
+
+                                    Collections.sort(trevosList);
+                                    selectedTrevos = new String[currentGameMode.maisMilionaria.minTrevos];
+                                    Arrays.fill(selectedTrevos, ""); // Fill with empty strings first
+                                    for (int i = 0; i < trevosList.size(); i++) {
+                                        selectedTrevos[i] = trevosList.get(i);
+                                    }
+                                    updateButtonColors();
+                                    updateTrevoDisplay(selectedTrevos, specialGrid);
+                                    if (result == null) {
+                                        result = new Result();
+                                    }
+                                    result.championTrevos = selectedTrevos;
+                                    debugState();
+                                });
+                            }
+                            addGame(trevosGrid, trevosButtons);
+                            leftPane.getChildren().addAll(trevosLabel, trevosGrid);
+                        }
+
+                        if (mode.name.equals("Dia de Sorte")) {
+                            Button monthsLabel = new Button("Mês:");
+                            monthsLabel.setPrefWidth(500);
+                            monthsLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER_LEFT;");
+                            GridPane monthsGrid = new GridPane();
+                            // For Months (Dia de Sorte)
+                            List<Button> monthButtons = monthsButtons(mode);
+                            for (Button monthButton : monthButtons) {
+                                monthButton.setOnAction(e -> {
+                                    String month = monthButton.getText();
+
+                                    // Toggle selection
+                                    if (month.equals(luckyMonth)) {
+                                        luckyMonth = "";
+                                    } else {
+                                        luckyMonth = month;
+                                    }
+
+                                    updateButtonColors();
+                                    updateMonthDisplay(luckyMonth, specialGrid);
+                                    if (result == null) {
+                                        result = new Result();
+                                    }
+                                    result.luckyMonth = luckyMonth;
+                                    debugState();
+                                });
+                            }
+                            addGame(monthsGrid, monthButtons);
+                            leftPane.getChildren().addAll(monthsLabel, monthsGrid);
+                        }
+
+                        // Add generate result button
+                        leftPane.getChildren().add(generateResultButton);
+                        break;
+                    }
+                }
+            }
+        });
+
+        // Add components to left pane
+        leftPane.getChildren().addAll(resultLabel, hboxGen, genResultNumbers);
+        leftPane.getChildren().add(generateResultButton);
+
+        // Configure ScrollPanes
+        ScrollPane leftScroll = new ScrollPane(leftPane);
+        leftScroll.setFitToWidth(true);
+        leftScroll.setFitToHeight(true);
+        ScrollPane rightScroll = new ScrollPane(rightPane);
+        rightScroll.setFitToWidth(true);
+        rightScroll.setFitToHeight(true);
+
+        // Add scroll panes to grid
+        gridPane.add(leftScroll, 0, 0);
+        gridPane.add(rightScroll, 1, 0);
+
+        // Set constraints
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setPercentWidth(50);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setPercentWidth(50);
+        gridPane.getColumnConstraints().addAll(col1, col2);
+
+        RowConstraints row = new RowConstraints();
+        row.setVgrow(Priority.ALWAYS);
+        gridPane.getRowConstraints().add(row);
+
+        return gridPane;
+    }
+
+    public void debugState() {
+        System.out.println("\n=== Result Debug State ===");
+        System.out.println("Selected Numbers: " + Arrays.toString(selectedNumbers));
+        if (currentGameMode == gameModes[0]) {
+            System.out.println("Selected Trevos: " + Arrays.toString(selectedTrevos));
+        }
+        if (currentGameMode == gameModes[6]) {
+            System.out.println("Lucky Month: " + luckyMonth);
+        }
+        System.out.println("========================\n");
+    }
+
+    private void updateResultDisplay(String[] numbers, GridPane numbersGrid) {
+        numbersGrid.getChildren().clear();
+        for (int i = 0; i < numbers.length; i++) {
+            Button button = new Button(numbers[i]);
+            button.setPrefWidth(40);
+            numbersGrid.add(button, i % 10, i / 10);
+        }
+    }
+
+    private void updateTrevoDisplay(String[] trevos, GridPane specialGrid) {
+        specialGrid.getChildren().clear();
+        for (int i = 0; i < currentGameMode.maisMilionaria.minTrevos; i++) {
+            Button button = new Button(trevos[i] != null ? trevos[i] : "");
+            button.setPrefWidth(40);
+            specialGrid.add(button, i, 0);
+        }
+    }
+
+    private void updateSuperSeteRightPane(String[] numbers, GridPane numbersGrid) {
+        numbersGrid.getChildren().clear();
+
+        for (int i = 0; i < 7; i++) {
+            Button columnLabel = new Button("C " + (i + 1));
+            columnLabel.setDisable(true);
+            columnLabel.setPrefWidth(80);
+            columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+            numbersGrid.add(columnLabel, i, 0);
+
+            Button numberButton = new Button(numbers != null && i < numbers.length ? numbers[i] : "");
+            numberButton.setPrefWidth(80);
+            numbersGrid.add(numberButton, i, 1);
+        }
+    }
+
+    private void updateSuperSeteState(String[] numbers) {
+        // Update the selected numbers array
+        selectedNumbers = numbers;
+
+        // Update button colors in left pane
+        for (Node node : genResultNumbers.getChildren()) {
+            if (node instanceof Button) {
+                Button button = (Button) node;
+                int column = GridPane.getColumnIndex(node);
+                int row = GridPane.getRowIndex(node);
+
+                // Skip column headers
+                if (row == 0) {
+                    continue;
+                }
+
+                if (column < numbers.length && numbers[column] != null
+                        && numbers[column].equals(button.getText())) {
+                    button.setStyle("-fx-background-color: #90EE90;");
+                } else {
+                    button.setStyle("");
+                }
+            }
+        }
+
+        // Update right pane display
+        updateSuperSeteRightPane(numbers, numbersGrid);
+
+        // Update result object
+        if (result == null) {
+            result = new Result();
+        }
+        result.championNumbers = numbers;
+
+        debugState();
+    }
+
+    private void updateMonthDisplay(String month, GridPane specialGrid) {
+        specialGrid.getChildren().clear();
+        Button button = new Button(month != null ? month : "");
+        button.setPrefWidth(100);
+        specialGrid.add(button, 0, 0);
+    }
+
+    private void updateButtonColors() {
+        // Update number buttons in left pane
+        if (currentGameMode != null && currentGameMode.name.equals("Super Sete")) {
+            String[] columns = String.join("|", selectedNumbers).split("\\|");
+            for (Node node : genResultNumbers.getChildren()) {
+                if (node instanceof Button) {
+                    Button button = (Button) node;
+                    int column = GridPane.getColumnIndex(node);
+                    int row = GridPane.getRowIndex(node);
+
+                    // Skip column headers
+                    if (row == 0) {
+                        continue;
+                    }
+
+                    // Get the selected number for this column
+                    String selectedNumber = columns[column];
+
+                    // Check if this number is selected for this specific column
+                    if (selectedNumber != null && !selectedNumber.isEmpty()
+                            && selectedNumber.equals(button.getText())) {
+                        button.setStyle("-fx-background-color: #90EE90;");
+                    } else {
+                        button.setStyle("");
+                    }
+                }
+            }
+        } else {
+            // Rest of the existing code for other game modes
+            if (selectedNumbers != null) {
+                for (Node node : genResultNumbers.getChildren()) {
+                    if (node instanceof Button) {
+                        Button button = (Button) node;
+                        if (Arrays.asList(selectedNumbers).contains(button.getText())) {
+                            button.setStyle("-fx-background-color: #90EE90;");
+                        } else {
+                            button.setStyle("");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update trevo buttons in left pane
+        if (selectedTrevos != null && currentGameMode != null && currentGameMode.name.equals("+Milionária")) {
+            for (Node node : genResultNumbers.getParent().getChildrenUnmodifiable()) {
+                if (node instanceof GridPane && node != genResultNumbers) {
+                    GridPane trevosGrid = (GridPane) node;
+                    for (Node tNode : trevosGrid.getChildren()) {
+                        if (tNode instanceof Button) {
+                            Button button = (Button) tNode;
+                            if (Arrays.asList(selectedTrevos).contains(button.getText())) {
+                                button.setStyle("-fx-background-color: #90EE90;");
+                            } else {
+                                button.setStyle("");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update month buttons in left pane
+        if (luckyMonth != null && currentGameMode != null && currentGameMode.name.equals("Dia de Sorte")) {
+            for (Node node : genResultNumbers.getParent().getChildrenUnmodifiable()) {
+                if (node instanceof GridPane && node != genResultNumbers) {
+                    GridPane monthsGrid = (GridPane) node;
+                    for (Node mNode : monthsGrid.getChildren()) {
+                        if (mNode instanceof Button) {
+                            Button button = (Button) mNode;
+                            if (button.getText().equals(luckyMonth)) {
+                                button.setStyle("-fx-background-color: #90EE90;");
+                            } else {
+                                button.setStyle("");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private ChoiceBox<String> gameChoice() {
+        ChoiceBox<String> gameChoice = new ChoiceBox<>();
+
+        Thread fileWatcher = new Thread(() -> {
+            while (true) {
+                Platform.runLater(() -> {
+                    File folder = new File(SRC_FOLDER_PATH_GAMES);
+                    File[] files = folder.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
+
+                    if (files != null && files.length > 0) {
+                        String currentSelection = gameChoice.getValue();
+                        List<String> currentItems = new ArrayList<>(gameChoice.getItems());
+                        List<String> newItems = new ArrayList<>();
+
+                        for (File file : files) {
+                            newItems.add(file.getName().split("_")[0] + " | "
+                                    + file.getName().split("_")[1].split("-")[2] + "/"
+                                    + file.getName().split("_")[1].split("-")[1] + "/"
+                                    + file.getName().split("_")[1].split("-")[0] + " | "
+                                    + file.getName().split("_")[2].split("-")[0] + ":"
+                                    + file.getName().split("_")[2].split("-")[1] + ":"
+                                    + file.getName().split("_")[2].split("-")[2].replace(".json", ""));
+                        }
+
+                        if (!currentItems.equals(newItems)) {
+                            gameChoice.getItems().clear();
+                            gameChoice.getItems().addAll(newItems);
+
+                            if (newItems.contains(currentSelection)) {
+                                gameChoice.setValue(currentSelection);
+                            } else {
+                                gameChoice.setValue("Escolha um jogo");
+                            }
+                        }
+                    } else {
+                        gameChoice.getItems().clear();
+                        gameChoice.getItems().add("Jogo não encontrado");
+                        gameChoice.setValue("Jogo não encontrado");
+                    }
+                });
+
+                try {
+                    WatchService watchService = FileSystems.getDefault().newWatchService();
+                    Path path = Paths.get(SRC_FOLDER_PATH_GAMES);
+                    path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
+                            StandardWatchEventKinds.ENTRY_DELETE,
+                            StandardWatchEventKinds.ENTRY_MODIFY);
+
+                    WatchKey key = watchService.take();
+                    key.pollEvents();
+                    key.reset();
+                } catch (IOException | InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        });
+
+        fileWatcher.setDaemon(true);
+        fileWatcher.start();
+
+        return gameChoice;
     }
 
     private void setStage(Scene scene, Stage window) {
         window.setTitle("LotoSorte");
         window.getIcons().add(icon);
         window.setScene(scene);
-        window.setWidth(width / 1.4);
+        window.setWidth(width / 1.2);
         window.setHeight(height / 1.5);
         window.show();
     }
