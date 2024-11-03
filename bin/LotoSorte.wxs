@@ -1,0 +1,116 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+    <Package Name="LotoSorte" 
+         Language="1033" 
+         Version="1.0.0" 
+         Manufacturer="YourCompany"
+         UpgradeCode="{1234ABCD-1234-1234-1234-1234ABCD1234}">
+        
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+        <ui:WixUI Id="WixUI_InstallDir" />
+        <!-- Add ARPNOREPAIR to customize uninstall behavior -->
+        <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
+
+        <StandardDirectory Id="ProgramFilesFolder">
+    <Directory Id="INSTALLFOLDER" Name="LotoSorte">
+        <Directory Id="LibDir" Name="lib"/>
+        <Directory Id="AppPDFDir" Name="src">
+            <Directory Id="MainDir" Name="main">
+                <Directory Id="JavaDir" Name="java">
+                    <Directory Id="ComDir" Name="com">
+                        <Directory Id="AppDir" Name="app">
+                            <Directory Id="PDFDestDir" Name="PDF"/>
+                        </Directory>
+                    </Directory>
+                </Directory>
+                <Directory Id="ResourcesDir" Name="resources">
+                    <Directory Id="ComResourcesDir" Name="com">
+                        <Directory Id="AppResourcesDir" Name="app">
+                            <Directory Id="PDFDir" Name="PDF"/>
+                        </Directory>
+                    </Directory>
+                </Directory>
+            </Directory>
+        </Directory>
+    </Directory>
+</StandardDirectory>
+        
+        <StandardDirectory Id="DesktopFolder"/>
+
+        <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+            <Component>
+            <File Id="MainExecutable" Source="target\LotoSorte.exe" KeyPath="yes">
+                <Shortcut Id="DesktopShortcut"
+                    Directory="DesktopFolder"
+                    Name="LotoSorte"
+                    WorkingDirectory="INSTALLFOLDER"
+                    IconIndex="0"
+                    Advertise="yes"/>
+                </File>
+            </Component>
+            <Component Id="GuiaPDFComponent" Guid="{7c52e529-7207-412d-a249-4d43349d2f38}">
+                <File Id="GuiaPDFFile" Source="target\classes\Guia.pdf" KeyPath="yes" />
+            </Component>
+        </ComponentGroup>
+    <ComponentGroup Id="EnvironmentGroup" Directory="INSTALLFOLDER">
+    <Component Id="EnvironmentVariables" Guid="{c1870927-1c9d-49a1-935b-ca10bde8be16}">
+        <Environment Id="PATH" Name="PATH" Value="[INSTALLFOLDER]lib" Permanent="no" Part="last" Action="set" System="yes" />
+    </Component>
+</ComponentGroup>
+
+        <ComponentGroup Id="LibComponents" Directory="LibDir">
+            <Component Id="JavaFXLibs" Guid="{5678ABCD-1234-90AB-CDEF-567890ABCDEF}">
+    <!-- JavaFX Dependencies -->
+    <File Id="JavafxBase" Source="target\lib\javafx-base-23.0.1.jar" KeyPath="yes"/>
+    <File Id="JavafxBaseWin" Source="target\lib\javafx-base-23.0.1-win.jar"/>
+    <File Id="JavafxControls" Source="target\lib\javafx-controls-23.0.1.jar"/>
+    <File Id="JavafxControlsWin" Source="target\lib\javafx-controls-23.0.1-win.jar"/>
+    <File Id="JavafxFxml" Source="target\lib\javafx-fxml-23.0.1.jar"/>
+    <File Id="JavafxFxmlWin" Source="target\lib\javafx-fxml-23.0.1-win.jar"/>
+    <File Id="JavafxGraphics" Source="target\lib\javafx-graphics-23.0.1.jar"/>
+    <File Id="JavafxGraphicsWin" Source="target\lib\javafx-graphics-23.0.1-win.jar"/>
+    <File Id="JavafxMedia" Source="target\lib\javafx-media-23.0.1.jar"/>
+    <File Id="JavafxMediaWin" Source="target\lib\javafx-media-23.0.1-win.jar"/>
+    <File Id="JavafxSwing" Source="target\lib\javafx-swing-23.0.1.jar"/>
+    <File Id="JavafxSwingWin" Source="target\lib\javafx-swing-23.0.1-win.jar"/>
+    
+    <!-- Jackson Dependencies -->
+    <File Id="JacksonCore" Source="target\lib\jackson-core-2.17.0.jar"/>
+    <File Id="JacksonDatabind" Source="target\lib\jackson-databind-2.17.0.jar"/>
+    <File Id="JacksonAnnotations" Source="target\lib\jackson-annotations-2.17.0.jar"/>
+    
+    <!-- iText PDF Dependencies -->
+    <File Id="ITextBarcodes" Source="target\lib\barcodes-8.0.5.jar"/>
+    <File Id="ITextBouncy" Source="target\lib\bouncy-castle-connector-8.0.5.jar"/>
+    <File Id="ITextByteBuddy" Source="target\lib\byte-buddy-1.14.9.jar"/>
+    <File Id="ITextCommons" Source="target\lib\commons-8.0.5.jar"/>
+    <File Id="ITextFontAsian" Source="target\lib\font-asian-8.0.5.jar"/>
+    <File Id="ITextForms" Source="target\lib\forms-8.0.5.jar"/>
+    <File Id="ITextHyph" Source="target\lib\hyph-8.0.5.jar"/>
+    <File Id="ITextIo" Source="target\lib\io-8.0.5.jar"/>
+    <File Id="ITextKernel" Source="target\lib\kernel-8.0.5.jar"/>
+    <File Id="ITextLayout" Source="target\lib\layout-8.0.5.jar"/>
+    <File Id="ITextPdfa" Source="target\lib\pdfa-8.0.5.jar"/>
+    <File Id="ITextPdfua" Source="target\lib\pdfua-8.0.5.jar"/>
+    <File Id="ITextSign" Source="target\lib\sign-8.0.5.jar"/>
+    <File Id="ITextSlf4j" Source="target\lib\slf4j-api-1.7.36.jar"/>
+    <File Id="ITextStyledXml" Source="target\lib\styled-xml-parser-8.0.5.jar"/>
+    <File Id="ITextSvg" Source="target\lib\svg-8.0.5.jar"/>
+</Component>
+        </ComponentGroup>
+
+        <MajorUpgrade DowngradeErrorMessage="A newer version is already installed."/>
+        <MediaTemplate EmbedCab="yes"/>
+
+    <Feature Id="ProductFeature" Title="LotoSorte" Level="1">
+      <ComponentGroupRef Id="ProductComponents"/>
+      <ComponentGroupRef Id="LibComponents"/>
+      <ComponentGroupRef Id="EnvironmentGroup"/>
+      <ComponentRef Id="GuiaPDFComponent"/>
+    </Feature>
+
+     <Icon Id="icon.ico" SourceFile="src\main\resources\icon.ico"/>
+    <Property Id="ARPPRODUCTICON" Value="icon.ico"/>
+    </Package>
+</Wix>

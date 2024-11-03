@@ -1,0 +1,54 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\Victo\\eclipse-workspace\\lotoSorte\\bin\\LotoSorte.wixproj": {}
+  },
+  "projects": {
+    "C:\\Users\\Victo\\eclipse-workspace\\lotoSorte\\bin\\LotoSorte.wixproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Victo\\eclipse-workspace\\lotoSorte\\bin\\LotoSorte.wixproj",
+        "projectName": "LotoSorte",
+        "projectPath": "C:\\Users\\Victo\\eclipse-workspace\\lotoSorte\\bin\\LotoSorte.wixproj",
+        "packagesPath": "C:\\Users\\Victo\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Victo\\eclipse-workspace\\lotoSorte\\bin\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\Victo\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "native"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "native": {
+            "targetAlias": "native",
+            "projectReferences": {}
+          }
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "native": {
+          "targetAlias": "native",
+          "dependencies": {
+            "WixToolset.UI.wixext": {
+              "target": "Package",
+              "version": "[5.0.0, )"
+            },
+            "WixToolset.Util.wixext": {
+              "target": "Package",
+              "version": "[5.0.0, )"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "Ri+WnSPtYD8=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Victo\\eclipse-workspace\\lotoSorte\\LotoSorte.wixproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Victo\\.nuget\\packages\\wixtoolset.ui.wixext\\5.0.0\\wixtoolset.ui.wixext.5.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

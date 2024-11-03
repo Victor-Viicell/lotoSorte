@@ -1,0 +1,22 @@
+<Project Sdk="WixToolset.Sdk/5.0.0">
+  <PropertyGroup>
+    <OutputName>LotoSorte</OutputName>
+    <OutputType>Package</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <HarvestDirectory Include="target">
+      <ComponentGroupName>ProductComponents</ComponentGroupName>
+      <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
+      <SuppressRootDirectory>true</SuppressRootDirectory>
+    </HarvestDirectory>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\src\main\resources\icon.ico" />
+  </ItemGroup>
+</Project>

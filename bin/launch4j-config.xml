@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+  <dontWrapJar>false</dontWrapJar>
+  <headerType>gui</headerType>
+  <jar>bin\target\lotoSorte-1.0.0-jar-with-dependencies.jar</jar>
+  <outfile>bin\target\LotoSorte.exe</outfile>
+  <errTitle>LotoSorte</errTitle>
+  <cmdLine></cmdLine>
+  <chdir>.</chdir>
+  <priority>normal</priority>
+  <downloadUrl></downloadUrl>
+  <supportUrl></supportUrl>
+  <stayAlive>false</stayAlive>
+  <restartOnCrash>false</restartOnCrash>
+  <manifest></manifest>
+  <icon>src\main\resources\icon.ico</icon>
+  <jre>
+    <path>%JAVA_HOME%</path>
+    <minVersion>23.0.0</minVersion>
+    <requires64Bit>true</requires64Bit>
+    <opt>--module-path "${INSTALL_PATH}/lib" --add-modules=javafx.controls,javafx.fxml,javafx.graphics,javafx.base,javafx.swing,javafx.media --add-opens=java.base/java.lang=ALL-UNNAMED</opt>
+</jre>
+  <versionInfo>
+    <fileVersion>1.0.0.0</fileVersion>
+    <txtFileVersion>1.0.0</txtFileVersion>
+    <fileDescription>LotoSorte Application</fileDescription>
+    <copyright>© 2024 Viicell. Todos os direitos reservados.</copyright>
+    <productVersion>1.0.0.0</productVersion>
+    <txtProductVersion>1.0.0</txtProductVersion>
+    <productName>LotoSorte</productName>
+    <companyName>Viicell</companyName>
+    <internalName>lotoSorte</internalName>
+    <originalFilename>LotoSorte.exe</originalFilename>
+    <trademarks></trademarks>
+    <language>PORTUGUESE_BRAZIL</language>
+  </versionInfo>
+</launch4jConfig>
