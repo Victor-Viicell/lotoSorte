@@ -3,6 +3,7 @@ package lotoSorte;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -66,9 +67,47 @@ public class App extends Application {
     private Image icon;
 
     // Get Executer directiory
-    public static final String INSTALLATION_PATH = new File(App.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getParent() + File.separator;
+    public static final String INSTALLATION_PATH = getInstallationPath();
     public static final String SRC_FOLDER_PATH_GAMES = INSTALLATION_PATH + "Games" + File.separator;
     public static final String SRC_FOLDER_PATH_RESULTS = INSTALLATION_PATH + "Results" + File.separator;
+
+// Add this method to handle path resolution
+    private static String getInstallationPath() {
+        try {
+            // Get the location of the running executable/jar
+            String executablePath = new File(App.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI()).getPath();
+
+            // Handle Windows path format
+            if (executablePath.startsWith("/")) {
+                executablePath = executablePath.substring(1);
+            }
+
+            // Get parent directory (Program Files (x86)\LotoSorte)
+            File installDir = new File(executablePath).getParentFile();
+            String installPath = installDir.getAbsolutePath() + File.separator;
+
+            // Create Games and Results directories
+            File gamesDir = new File(installPath + "Games");
+            File resultsDir = new File(installPath + "Results");
+
+            gamesDir.mkdirs();
+            resultsDir.mkdirs();
+
+            return installPath;
+
+        } catch (URISyntaxException e) {
+            // Fallback to Program Files if something goes wrong
+            String fallbackPath = "C:" + File.separator + "Program Files (x86)"
+                    + File.separator + "LotoSorte" + File.separator;
+
+            // Create directories in fallback location
+            new File(fallbackPath + "Games").mkdirs();
+            new File(fallbackPath + "Results").mkdirs();
+
+            return fallbackPath;
+        }
+    }
 
     private ChoiceBox<String> choiceBox;
     private ChoiceBox<String> numberAmount;
@@ -2070,6 +2109,14 @@ public class App extends Application {
 
                     game.saveToFile(filePath);
                     System.out.println("\nGame saved successfully to: " + filePath);
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    stage = (Stage) successAlert.getDialogPane().getScene().getWindow();
+                    stage.getIcons().add(icon);
+                    successAlert.setTitle("Jogo Salvo");
+                    successAlert.setHeaderText("Jogo salvo com sucesso!");
+                    successAlert.setContentText("Arquivo salvo em:\n" + filePath);
+                    successAlert.showAndWait();
+                    System.out.println("\nGame saved successfully to: " + filePath);
                     Tab jogosTab = mainTabPane.getTabs().stream()
                             .filter(tab -> tab.getText().equals("Jogos"))
                             .findFirst()
@@ -2845,6 +2892,14 @@ public class App extends Application {
                     }
 
                     resultToSave.saveToFile(filePath);
+                    System.out.println("\nResult saved successfully to: " + filePath);
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    stage = (Stage) successAlert.getDialogPane().getScene().getWindow();
+                    stage.getIcons().add(icon);
+                    successAlert.setTitle("Jogo Salvo");
+                    successAlert.setHeaderText("Jogo salvo com sucesso!");
+                    successAlert.setContentText("Arquivo salvo em:\n" + filePath);
+                    successAlert.showAndWait();
                     System.out.println("\nResult saved successfully to: " + filePath);
                     refreshResultsList(resultsButtonsContainer);
                 } catch (Exception e) {

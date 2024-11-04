@@ -4,6 +4,11 @@
     <OutputType>Package</OutputType>
   </PropertyGroup>
   <ItemGroup>
+  <Content Include="banner.bmp" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="dialog.bmp" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="license.rtf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="WixToolset.UI.wixext" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>

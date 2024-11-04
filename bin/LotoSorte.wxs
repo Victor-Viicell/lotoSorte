@@ -6,12 +6,33 @@
          Version="1.0.0" 
          Manufacturer="YourCompany"
          UpgradeCode="{1234ABCD-1234-1234-1234-1234ABCD1234}">
-        
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
-        <ui:WixUI Id="WixUI_InstallDir" />
+        <!-- Dialog text in Portuguese -->
+        <WixVariable Id="WixUIBannerBmp" Value="banner.bmp"/>
+        <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp"/>
+        <WixVariable Id="WixUILicenseRtf" Value="license.rtf"/>
+        <Property Id="VerifyReadyDlgInstallTitle" Value="Pronto para Instalar"/>
+        <Property Id="VerifyReadyDlgInstallText" Value="Clique em Instalar para iniciar a instalação."/>
+        <Property Id="MaintenanceWelcomeDlgTitle" Value="Manutenção do LotoSorte"/>
+        <Property Id="MaintenanceTypeDlgTitle" Value="Opções de Manutenção"/>
+
+        <!-- Update these existing properties with Portuguese text -->
+        <Property Id="WelcomeDlgTitle" Value="Bem-vindo ao Instalador do LotoSorte" />
+        <Property Id="WelcomeDlgDescription" Value="Este assistente irá guiá-lo através da instalação do LotoSorte. Clique em Próximo para continuar." />
+
+        <Property Id="InstallDirDlgTitle" Value="Pasta de Instalação" />
+        <Property Id="InstallDirDlgDescription" Value="Clique em Próximo para instalar na pasta padrão ou clique em Alterar para escolher outra pasta." />
+
+        <Property Id="ProgressDlgTitle" Value="Instalando LotoSorte" />
+        <Property Id="ExitDialogTitle" Value="Instalação Concluída" />
+        <Property Id="ExitDialogDescription" Value="A instalação do LotoSorte foi concluída com sucesso." />
+        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Executar LotoSorte agora"/>
+        <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="A instalação foi concluída com sucesso. Obrigado por escolher o LotoSorte!"/>
         <!-- Add ARPNOREPAIR to customize uninstall behavior -->
         <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
 
+        <!-- Keep the UI reference -->
+        <ui:WixUI Id="WixUI_InstallDir" />
         <StandardDirectory Id="ProgramFilesFolder">
     <Directory Id="INSTALLFOLDER" Name="LotoSorte">
         <Directory Id="LibDir" Name="lib"/>
@@ -40,15 +61,16 @@
 
         <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
             <Component>
-            <File Id="MainExecutable" Source="target\LotoSorte.exe" KeyPath="yes">
-                <Shortcut Id="DesktopShortcut"
-                    Directory="DesktopFolder"
-                    Name="LotoSorte"
-                    WorkingDirectory="INSTALLFOLDER"
-                    IconIndex="0"
-                    Advertise="yes"/>
-                </File>
-            </Component>
+    <File Id="MainExecutable" Source="target\LotoSorte.exe" KeyPath="yes">
+        <Shortcut Id="DesktopShortcut"
+            Directory="DesktopFolder"
+            Name="LotoSorte"
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="icon.ico"
+            IconIndex="0"
+            Advertise="yes"/>
+    </File>
+</Component>
             <Component Id="GuiaPDFComponent" Guid="{7c52e529-7207-412d-a249-4d43349d2f38}">
                 <File Id="GuiaPDFFile" Source="target\classes\Guia.pdf" KeyPath="yes" />
             </Component>
@@ -111,6 +133,6 @@
     </Feature>
 
      <Icon Id="icon.ico" SourceFile="src\main\resources\icon.ico"/>
-    <Property Id="ARPPRODUCTICON" Value="icon.ico"/>
+<Property Id="ARPPRODUCTICON" Value="icon.ico"/>
     </Package>
 </Wix>

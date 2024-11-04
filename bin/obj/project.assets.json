@@ -58,11 +58,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Victo\\eclipse-workspace\\lotoSorte\\bin\\LotoSorte.wixproj",
+      "projectUniqueName": "C:\\Users\\Victo\\Documents\\GitHub\\lotoSorte\\bin\\LotoSorte.wixproj",
       "projectName": "LotoSorte",
-      "projectPath": "C:\\Users\\Victo\\eclipse-workspace\\lotoSorte\\bin\\LotoSorte.wixproj",
+      "projectPath": "C:\\Users\\Victo\\Documents\\GitHub\\lotoSorte\\bin\\LotoSorte.wixproj",
       "packagesPath": "C:\\Users\\Victo\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Victo\\eclipse-workspace\\lotoSorte\\bin\\obj\\",
+      "outputPath": "C:\\Users\\Victo\\Documents\\GitHub\\lotoSorte\\bin\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Victo\\AppData\\Roaming\\NuGet\\NuGet.Config"

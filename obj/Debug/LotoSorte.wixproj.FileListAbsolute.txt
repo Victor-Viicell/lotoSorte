@@ -1,6 +1,0 @@
-C:\Users\Victo\eclipse-workspace\lotoSorte\bin\Debug\LotoSorte.msi
-C:\Users\Victo\eclipse-workspace\lotoSorte\bin\Debug\LotoSorte.wixpdb
-C:\Users\Victo\eclipse-workspace\lotoSorte\obj\Debug\LotoSorte.wixproj.CoreCompileInputs.cache
-C:\Users\Victo\eclipse-workspace\lotoSorte\obj\Debug\LotoSorte.msi
-C:\Users\Victo\eclipse-workspace\lotoSorte\obj\Debug\LotoSorte.wixpdb
-C:\Users\Victo\eclipse-workspace\lotoSorte\obj\Debug\LotoSorte.wixproj.BindTracking-neutral.txt
