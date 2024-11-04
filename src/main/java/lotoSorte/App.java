@@ -30,6 +30,7 @@ import com.itextpdf.layout.properties.TextAlignment;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -971,17 +972,14 @@ public class App extends Application {
 
     // Then modify the addFaixaButton method to clear the warning when a faixa is selected
     private void addFaixaButton(VBox container, String faixaName, Object faixaData, VBox leftPane, Result result) {
-        HBox faixaBox = new HBox(5); // Create HBox to hold both buttons
-
+        HBox faixaBox = new HBox(5);
         Button faixaButton = new Button(faixaName);
         faixaButton.setPrefWidth(width);
 
-        // Create count button
         Button countButton = new Button();
-        countButton.setPrefWidth(width - 100); // Adjust width to make room for count
+        countButton.setPrefWidth(width - 100);
         countButton.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER; ");
 
-        // Set count based on faixaData type
         switch (faixaData) {
             case Result.MMilionaria[] mMilionarias ->
                 countButton.setText(mMilionarias.length + " jogos");
@@ -996,11 +994,97 @@ public class App extends Application {
         faixaButton.setOnAction(e -> {
             leftPane.getChildren().clear();
             leftPane.setId(faixaName);
-            displayWinningGames(leftPane, faixaData, result);
+
+            // Special handling for Super Sete
+            if (result.game.gameMode.name.equals("Super Sete")) {
+                displaySuperSeteWinningGames(leftPane, faixaData, result);
+            } else {
+                displayWinningGames(leftPane, faixaData, result);
+            }
         });
 
         faixaBox.getChildren().addAll(faixaButton, countButton);
         container.getChildren().add(faixaBox);
+    }
+
+    private void displaySuperSeteWinningGames(VBox conteiner, Object faixaData, Result result) {
+        Button titleLabel = new Button("Jogos Premiados");
+        titleLabel.setPrefWidth(width);
+        titleLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+
+        Button currentFaixaLabel = new Button("Faixa Atual: " + conteiner.getId());
+        currentFaixaLabel.setPrefWidth(width);
+        currentFaixaLabel.setStyle("-fx-background-color: #e0e0e0; -fx-alignment: CENTER;");
+
+        conteiner.getChildren().addAll(titleLabel, currentFaixaLabel);
+
+        VBox gamesContainer = new VBox(10);
+        gamesContainer.setPadding(new Insets(5));
+
+        Result.BaseGame[] games = (Result.BaseGame[]) faixaData;
+
+        int gameNumber = 1; // Add a game counter
+
+        for (Result.BaseGame game : games) {
+            VBox gameBox = new VBox(5);
+            gameBox.setStyle("-fx-border-color: #cccccc; -fx-border-radius: 5; -fx-padding: 5;");
+
+            Button gameNumberLabel = new Button("Jogo " + gameNumber++); // Add the game number
+            gameNumberLabel.setPrefWidth(width);
+            gameNumberLabel.setStyle("-fx-background-color: #f0f0f0; -fx-alignment: CENTER;");
+
+            GridPane numbersGrids = new GridPane();
+            numbersGrids.setHgap(5);
+            numbersGrids.setVgap(5);
+
+            List<List<String>> columns = new ArrayList<>();
+            List<String> currentColumn = new ArrayList<>();
+
+            for (String number : game.numbers) {
+                if (number.equals("|")) {
+                    if (!currentColumn.isEmpty()) {
+                        columns.add(new ArrayList<>(currentColumn));
+                        currentColumn.clear();
+                    }
+                } else {
+                    currentColumn.add(number);
+                }
+            }
+            if (!currentColumn.isEmpty()) {
+                columns.add(currentColumn);
+            }
+
+            for (int colIndex = 0; colIndex < columns.size(); colIndex++) {
+                Button columnLabel = new Button("C " + (colIndex + 1));
+                columnLabel.setDisable(true);
+                columnLabel.setPrefWidth(80);
+                columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                numbersGrids.add(columnLabel, 0, colIndex);
+
+                GridPane numberPane = new GridPane();
+                numberPane.setHgap(2);
+                numberPane.setVgap(2);
+
+                List<String> columnNumbers = columns.get(colIndex);
+                for (int i = 0; i < columnNumbers.size(); i++) {
+                    Button numberButton = new Button(columnNumbers.get(i));
+                    numberButton.setPrefWidth(25);
+
+                    if (result.championNumbers[colIndex].equals(columnNumbers.get(i))) {
+                        numberButton.setStyle("-fx-background-color: #90EE90;");
+                    }
+
+                    numberPane.add(numberButton, i, 0); // Changed from (0, i) to (i, 0)
+                }
+
+                numbersGrids.add(numberPane, 1, colIndex);
+            }
+
+            gameBox.getChildren().addAll(gameNumberLabel, numbersGrids); // Changed from numbersGrid to numbersGrids
+            gamesContainer.getChildren().add(gameBox);
+        }
+
+        conteiner.getChildren().add(gamesContainer);
     }
 
     private void displayWinningGames(VBox container, Object faixaData, Result result) {
@@ -1608,6 +1692,7 @@ public class App extends Application {
         scrollPaneGenResults.setPrefWidth(width);
         scrollPaneGenResults.setPrefHeight(height);
         scrollPaneGenResults.setPadding(new javafx.geometry.Insets(5));
+        scrollPaneGenResults.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPaneGenResults.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
 
         // Initialize the class-level container
@@ -3151,10 +3236,55 @@ public class App extends Application {
 
     private void updateResultDisplay(String[] numbers, GridPane numbersGrid) {
         numbersGrid.getChildren().clear();
-        for (int i = 0; i < numbers.length; i++) {
-            Button button = new Button(numbers[i]);
-            button.setPrefWidth(40);
-            numbersGrid.add(button, i % 10, i / 10);
+
+        if (currentGameMode.name.equals("Super Sete")) {
+            int currentCol = 0;
+            List<String> currentColumnNumbers = new ArrayList<>();
+
+            for (String number : numbers) {
+                if (number.equals("|")) {
+                    // Add column header
+                    Button columnLabel = new Button("Coluna " + (currentCol + 1));
+                    columnLabel.setDisable(true);
+                    columnLabel.setPrefWidth(80);
+                    columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                    numbersGrid.add(columnLabel, currentCol, 0);
+
+                    // Add numbers for this column
+                    for (int i = 0; i < currentColumnNumbers.size(); i++) {
+                        Button numberButton = new Button(currentColumnNumbers.get(i));
+                        numberButton.setPrefWidth(80);
+                        numbersGrid.add(numberButton, currentCol, i + 1);
+                    }
+
+                    currentCol++;
+                    currentColumnNumbers.clear();
+                } else {
+                    currentColumnNumbers.add(number);
+                }
+            }
+
+            // Handle the last column
+            if (!currentColumnNumbers.isEmpty()) {
+                Button columnLabel = new Button("Coluna " + (currentCol + 1));
+                columnLabel.setDisable(true);
+                columnLabel.setPrefWidth(80);
+                columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                numbersGrid.add(columnLabel, currentCol, 0);
+
+                for (int i = 0; i < currentColumnNumbers.size(); i++) {
+                    Button numberButton = new Button(currentColumnNumbers.get(i));
+                    numberButton.setPrefWidth(80);
+                    numbersGrid.add(numberButton, currentCol, i + 1);
+                }
+            }
+        } else {
+            // Original code for other game modes
+            for (int i = 0; i < numbers.length; i++) {
+                Button button = new Button(numbers[i]);
+                button.setPrefWidth(40);
+                numbersGrid.add(button, i % 10, i / 10);
+            }
         }
     }
 

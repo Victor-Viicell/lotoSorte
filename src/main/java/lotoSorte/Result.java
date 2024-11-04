@@ -194,36 +194,51 @@ public class Result {
         BaseGame[] result = new BaseGame[game.amount];
         int currentPoints;
 
-        // Verifica se o modo de jogo é "Super-Sete"
-        if (game.gameMode.name.equals("Super-Sete")) {
-            // Loop para verificar cada jogo
+        if (game.gameMode.name.equals("Super Sete")) {
             for (int i = 0; i < game.amount; i++) {
                 currentPoints = 0;
-                // Verifica cada coluna do jogo Super-Sete
-                for (int j = 0; j < game.superSete.columnNumbers[i].length; j++) {
-                    // Compara os números da coluna com o número campeão correspondente
-                    for (String item : game.superSete.columnNumbers[i][j]) {
-                        if (item == null ? championNumbers[j] == null : item.equals(championNumbers[j])) {
-                            currentPoints++;
+                String[] currentGame = game.games[i];
+                int currentIndex = 0;
+
+                for (int col = 0; col < 7; col++) {
+                    // Skip the separator
+                    currentIndex++;
+
+                    // Find the end of current column
+                    int columnEnd = currentIndex;
+                    while (columnEnd < currentGame.length && !currentGame[columnEnd].equals("|")) {
+                        columnEnd++;
+                    }
+
+                    // Check numbers in this column against the champion number for this column
+                    boolean matchFound = false;
+                    for (int j = currentIndex; j < columnEnd; j++) {
+                        if (currentGame[j].equals(championNumbers[col])) {
+                            matchFound = true;
                             break;
                         }
                     }
+
+                    if (matchFound) {
+                        currentPoints++;
+                    }
+
+                    // Move to start of next column
+                    currentIndex = columnEnd;
                 }
-                // Se o jogo atingir o número de pontos necessários, adiciona ao resultado
+
                 if (currentPoints == point) {
                     result[i] = new BaseGame();
-                    result[i].numbers = game.gameMode.superSete.genSuperSeven(game.numbers, game.superSete.columnNumbers[i]);
+                    result[i].numbers = currentGame;
                 } else {
                     result[i] = null;
                 }
             }
         } else {
-            // Loop para verificar cada jogo nos outros modos de jogo
+            // Original code for other game modes
             for (int i = 0; i < game.amount; i++) {
                 currentPoints = 0;
-                // Verifica cada número do jogo
                 for (int j = 0; j < game.numbers; j++) {
-                    // Compara o número do jogo com os números campeões
                     for (String championNumber : championNumbers) {
                         if (championNumber == null ? game.games[i][j] == null
                                 : championNumber.equals(game.games[i][j])) {
@@ -232,7 +247,6 @@ public class Result {
                         }
                     }
                 }
-                // Se o jogo atingir o número de pontos necessários, adiciona ao resultado
                 if (currentPoints == point) {
                     result[i] = new BaseGame();
                     result[i].numbers = game.games[i];
@@ -242,7 +256,6 @@ public class Result {
             }
         }
 
-        // Remove os elementos nulos do array de resultado
         result = Arrays.stream(result).filter(Objects::nonNull).toArray(BaseGame[]::new);
         return result;
     }
