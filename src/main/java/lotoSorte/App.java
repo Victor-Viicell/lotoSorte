@@ -15,7 +15,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -2783,7 +2785,7 @@ public class App extends Application {
         specialGrid.setHgap(5);
         specialGrid.setVgap(5);
 
-        gameChoice.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+        gameChoice.getSelectionModel().selectedItemProperty().addListener((var observable, var oldValue, var newValue) -> {
             if (newValue != null && !newValue.equals("Escolha um jogo") && !newValue.equals("Jogo não encontrado")) {
                 String gameName = newValue.split(" \\|")[0];
                 for (GameMode mode : gameModes) {
@@ -2792,30 +2794,41 @@ public class App extends Application {
                         numbersGrid.getChildren().clear();
                         specialGrid.getChildren().clear();
 
-                        if (mode.name.equals("Super Sete")) {
-                            // Reset the array with exactly 7 elements for Super Sete
-                            selectedNumbers = new String[7];
-                            Arrays.fill(selectedNumbers, ""); // Initialize with empty strings
-                            for (int col = 0; col < 7; col++) {
-                                // Add column label
-                                Button columnLabel = new Button("C " + (col + 1));
-                                columnLabel.setDisable(true);
-                                columnLabel.setPrefWidth(80);
-                                columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
-                                numbersGrid.add(columnLabel, col, 0);
-
-                                // Add single number display for each column
-                                Button numberButton = new Button("");
-                                numberButton.setPrefWidth(80);
-                                numbersGrid.add(numberButton, col, 1);
+                        switch (mode.name) {
+                            case "Lotomania" -> {
+                                // Initialize grid with 20 empty buttons in a 4x5 layout
+                                for (int i = 0; i < 20; i++) {
+                                    Button numberButton = new Button(" ");
+                                    numberButton.setPrefWidth(40);
+                                    numbersGrid.add(numberButton, i % 4, i / 4); // 4 columns, 5 rows
+                                }
                             }
-                            updateSuperSeteState(selectedNumbers);
-                        } else {
-                            // Original code for other game modes
-                            for (int i = 0; i < mode.minSelections; i++) {
-                                Button numberButton = new Button(" ");
-                                numberButton.setPrefWidth(40);
-                                numbersGrid.add(numberButton, i % 10, i / 10);
+                            case "Super Sete" -> {
+                                // Reset the array with exactly 7 elements for Super Sete
+                                selectedNumbers = new String[7];
+                                Arrays.fill(selectedNumbers, ""); // Initialize with empty strings
+                                for (int col = 0; col < 7; col++) {
+                                    // Add column label
+                                    Button columnLabel = new Button("C " + (col + 1));
+                                    columnLabel.setDisable(true);
+                                    columnLabel.setPrefWidth(80);
+                                    columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                                    numbersGrid.add(columnLabel, col, 0);
+
+                                    // Add single number display for each column
+                                    Button numberButton = new Button("");
+                                    numberButton.setPrefWidth(80);
+                                    numbersGrid.add(numberButton, col, 1);
+                                }
+                                updateSuperSeteState(selectedNumbers);
+                            }
+                            default -> {
+                                // Original code for other game modes
+                                for (int i = 0; i < mode.minSelections; i++) {
+                                    Button numberButton = new Button(" ");
+                                    numberButton.setPrefWidth(40);
+                                    numbersGrid.add(numberButton, i % 10, i / 10);
+                                }
                             }
                         }
 
@@ -2870,40 +2883,54 @@ public class App extends Application {
                     if (mode.name.equals(gameName)) {
                         currentGameMode = mode;
                         result = new Result();
-                        Game simGame = result.simulateResult(mode);
 
-                        // Update selected values with simulated results
-                        selectedNumbers = simGame.games[0];
-                        if (mode.name.equals("Super Sete")) {
-                            selectedNumbers = Arrays.stream(simGame.games[0])
-                                    .filter(s -> !s.equals("|"))
-                                    .toArray(String[]::new);
-                            updateSuperSeteState(selectedNumbers);
+                        switch (mode.name) {
+                            case "Lotomania" -> {
+                                selectedNumbers = new String[20];
+                                // Generate 20 unique random numbers between 1-100
+                                Set<String> numbers = new HashSet<>();
+                                while (numbers.size() < 20) {
+                                    numbers.add(String.format("%02d", (int) (Math.random() * 100) + 1));
+                                }
+                                selectedNumbers = numbers.toArray(new String[0]);
+                                Arrays.sort(selectedNumbers);
+                            }
+                            case "Super Sete" -> {
+                                selectedNumbers = new String[7];
+                                Game simGame = result.simulateResult(mode);
+                                System.arraycopy(simGame.games[0], 0, selectedNumbers, 0, 7);
+                                updateSuperSeteState(selectedNumbers);
+                            }
+                            default -> {
+                                selectedNumbers = new String[mode.minSelections];
+                                Game simGame = result.simulateResult(mode);
+                                System.arraycopy(simGame.games[0], 0, selectedNumbers, 0, mode.minSelections);
+                            }
                         }
 
-                        // Initialize special elements if needed
+                        // Rest of the existing code remains the same
                         if (mode.name.equals("+Milionária")) {
-                            selectedTrevos = simGame.maisMilionaria.trevos[0];
-                        } else if (mode.name.equals("Dia de Sorte")) {
+                            selectedTrevos = new String[mode.maisMilionaria.minTrevos];
+                            Game simGame = result.simulateResult(mode);
+                            System.arraycopy(simGame.maisMilionaria.trevos[0], 0, selectedTrevos, 0, mode.maisMilionaria.minTrevos);
+                        }
+
+                        if (mode.name.equals("Dia de Sorte")) {
+                            Game simGame = result.simulateResult(mode);
                             luckyMonth = simGame.diaDeSorte.month[0];
                         }
 
-                        // Update colors in left pane first
                         updateButtonColors();
-
-                        // Then update displays
-                        if (mode.name.equals("Super Sete")) {
-                            updateSuperSeteState(selectedNumbers);
-                        } else {
+                        if (!mode.name.equals("Super Sete")) {
                             updateResultDisplay(selectedNumbers, numbersGrid);
                         }
                         if (mode.name.equals("+Milionária")) {
                             updateTrevoDisplay(selectedTrevos, specialGrid);
-                        } else if (mode.name.equals("Dia de Sorte")) {
+                        }
+                        if (mode.name.equals("Dia de Sorte")) {
                             updateMonthDisplay(luckyMonth, specialGrid);
                         }
 
-                        // Update result object
                         result.championNumbers = selectedNumbers;
                         result.championTrevos = selectedTrevos;
                         result.luckyMonth = luckyMonth;
@@ -3005,6 +3032,11 @@ public class App extends Application {
                             selectedNumbers = mode.name.equals("Super Sete")
                                     ? new String[7]
                                     : new String[mode.minSelections];
+                            Arrays.fill(selectedNumbers, "");
+                        }
+
+                        if (mode.name.equals("Lotomania")) {
+                            selectedNumbers = new String[20]; // Initialize array for 20 numbers
                             Arrays.fill(selectedNumbers, "");
                         }
 
@@ -3237,53 +3269,61 @@ public class App extends Application {
     private void updateResultDisplay(String[] numbers, GridPane numbersGrid) {
         numbersGrid.getChildren().clear();
 
-        if (currentGameMode.name.equals("Super Sete")) {
-            int currentCol = 0;
-            List<String> currentColumnNumbers = new ArrayList<>();
+        switch (currentGameMode.name) {
+            case "Lotomania" -> {
+                // Display 20 numbers in a 4x5 grid layout
+                for (int i = 0; i < 20; i++) {
+                    Button button = new Button(numbers[i] != null ? numbers[i] : "");
+                    button.setPrefWidth(40);
+                    numbersGrid.add(button, i % 4, i / 4); // 4 columns, 5 rows
+                }
+            }
+            case "Super Sete" -> {
+                int currentCol = 0;
+                List<String> currentColumnNumbers = new ArrayList<>();
+                for (String number : numbers) {
+                    if (number.equals("|")) {
+                        // Add column header
+                        Button columnLabel = new Button("Coluna " + (currentCol + 1));
+                        columnLabel.setDisable(true);
+                        columnLabel.setPrefWidth(80);
+                        columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
+                        numbersGrid.add(columnLabel, currentCol, 0);
 
-            for (String number : numbers) {
-                if (number.equals("|")) {
-                    // Add column header
+                        // Add numbers for this column
+                        for (int i = 0; i < currentColumnNumbers.size(); i++) {
+                            Button numberButton = new Button(currentColumnNumbers.get(i));
+                            numberButton.setPrefWidth(80);
+                            numbersGrid.add(numberButton, currentCol, i + 1);
+                        }
+
+                        currentCol++;
+                        currentColumnNumbers.clear();
+                    } else {
+                        currentColumnNumbers.add(number);
+                    }
+                }   // Handle the last column
+                if (!currentColumnNumbers.isEmpty()) {
                     Button columnLabel = new Button("Coluna " + (currentCol + 1));
                     columnLabel.setDisable(true);
                     columnLabel.setPrefWidth(80);
                     columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
                     numbersGrid.add(columnLabel, currentCol, 0);
 
-                    // Add numbers for this column
                     for (int i = 0; i < currentColumnNumbers.size(); i++) {
                         Button numberButton = new Button(currentColumnNumbers.get(i));
                         numberButton.setPrefWidth(80);
                         numbersGrid.add(numberButton, currentCol, i + 1);
                     }
-
-                    currentCol++;
-                    currentColumnNumbers.clear();
-                } else {
-                    currentColumnNumbers.add(number);
                 }
             }
-
-            // Handle the last column
-            if (!currentColumnNumbers.isEmpty()) {
-                Button columnLabel = new Button("Coluna " + (currentCol + 1));
-                columnLabel.setDisable(true);
-                columnLabel.setPrefWidth(80);
-                columnLabel.setStyle("-fx-background-color: #000000; -fx-text-fill: #ffffff;");
-                numbersGrid.add(columnLabel, currentCol, 0);
-
-                for (int i = 0; i < currentColumnNumbers.size(); i++) {
-                    Button numberButton = new Button(currentColumnNumbers.get(i));
-                    numberButton.setPrefWidth(80);
-                    numbersGrid.add(numberButton, currentCol, i + 1);
+            default -> {
+                // Original code for other game modes
+                for (int i = 0; i < numbers.length; i++) {
+                    Button button = new Button(numbers[i]);
+                    button.setPrefWidth(40);
+                    numbersGrid.add(button, i % 10, i / 10);
                 }
-            }
-        } else {
-            // Original code for other game modes
-            for (int i = 0; i < numbers.length; i++) {
-                Button button = new Button(numbers[i]);
-                button.setPrefWidth(40);
-                numbersGrid.add(button, i % 10, i / 10);
             }
         }
     }

@@ -96,6 +96,8 @@ public class Result {
                 new Game(gameMode, 1, gameMode.minSelections, gameMode.maisMilionaria.minTrevos);
             case "Dia de Sorte" ->
                 new Game(gameMode, 1, gameMode.minSelections, 1);
+            case "Lotomania" ->
+                new Game(gameMode, 1, 20, 0);  // Fixed to generate 50 numbers for Lotomania
             default ->
                 new Game(gameMode, 1, gameMode.minSelections, 0);
         };
